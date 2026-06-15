@@ -45,3 +45,4 @@ programs/match-escrow/target/
 # Test coverage
 coverage/
 .nyc_output/
+package-lock.json
