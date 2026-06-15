@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, gt, gte, lte, sql } from "drizzle-orm";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { matches } from "../db/schema";
-import { env } from "./lib/env";
+import { env, getWagerReadiness } from "./lib/env";
 
 const ROOM_CODE_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_CODE_LENGTH = 6;
@@ -25,6 +26,59 @@ function generateRoomCode(): string {
 const stakeSchema = z.number().int().min(MIN_STAKE).max(MAX_STAKE);
 const timeControlSchema = z.enum(["1+0", "3+0", "5+3", "10+5"]);
 const colorPrefSchema = z.enum(["white", "black", "random"]);
+const solanaAddressSchema = z.string().min(32).max(44).refine(
+  (value) => {
+    try {
+      new PublicKey(value);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  { message: "Invalid Solana address" }
+);
+const solanaSignatureSchema = z.string().min(64).max(128);
+
+function assertWagerReady() {
+  const readiness = getWagerReadiness();
+  if (!readiness.ready) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: `Real wagers are not enabled: ${readiness.blockers.join("; ")}`,
+    });
+  }
+}
+
+async function assertConfirmedEscrowSignature(
+  signature: string,
+  label: "create" | "accept"
+) {
+  const connection = new Connection(env.solanaRpcUrl, "confirmed");
+  const status = await connection.getSignatureStatus(signature, {
+    searchTransactionHistory: true,
+  });
+
+  if (!status.value) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `${label} escrow transaction is not confirmed on-chain.`,
+    });
+  }
+
+  if (status.value.err) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `${label} escrow transaction failed on-chain.`,
+    });
+  }
+
+  if (!["confirmed", "finalized"].includes(status.value.confirmationStatus ?? "")) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `${label} escrow transaction has not reached confirmed status.`,
+    });
+  }
+}
 
 export const wagerRouter = createRouter({
   /**
@@ -43,9 +97,14 @@ export const wagerRouter = createRouter({
         isPrivate: z.boolean(),
         allowSpectators: z.boolean().default(true),
         ranked: z.boolean().default(true),
+        escrowPda: solanaAddressSchema,
+        escrowCreateSig: solanaSignatureSchema,
       })
     )
     .mutation(async ({ input }) => {
+      assertWagerReady();
+      await assertConfirmedEscrowSignature(input.escrowCreateSig, "create");
+
       const db = await getDb();
       const stakeMint = input.stakeMint ?? CHESS_MINT;
 
@@ -110,6 +169,7 @@ export const wagerRouter = createRouter({
           isPrivate: input.isPrivate,
           roomCode,
           allowSpectators: input.isPrivate ? input.allowSpectators : true,
+          escrowPda: input.escrowPda,
           rakeBps: HOUSE_FEE_BPS_DEFAULT,
           expiresAt,
         })
@@ -121,14 +181,7 @@ export const wagerRouter = createRouter({
         matchId,
         roomCode,
         expiresAt,
-        // The client should now build and sign the on-chain `create_match` ix.
-        // We return the parameters so the wager-tx builder can pick them up.
-        nextStep: {
-          kind: "sign_create_match" as const,
-          stakeAmount: input.stakeAmount,
-          stakeMint,
-          colorPref: input.colorPref,
-        },
+        escrowCreateSig: input.escrowCreateSig,
       };
     }),
 
@@ -216,11 +269,14 @@ export const wagerRouter = createRouter({
     .input(
       z.object({
         matchId: z.number(),
-        challengerWallet: z.string().min(32).max(44),
-        escrowAcceptSig: z.string(),
+        challengerWallet: solanaAddressSchema,
+        escrowAcceptSig: solanaSignatureSchema,
       })
     )
     .mutation(async ({ input }) => {
+      assertWagerReady();
+      await assertConfirmedEscrowSignature(input.escrowAcceptSig, "accept");
+
       const db = await getDb();
       const [row] = await db
         .select()

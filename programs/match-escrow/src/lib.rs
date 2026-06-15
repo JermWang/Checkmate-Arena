@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("MaTcHeScRoWpRoGrAm111111111111111111111111");
+declare_id!("2PicFGu1K2LztiAy7pWs7o1grfTsvm93jSgmthcfXx4U");
 
 #[program]
 pub mod match_escrow {

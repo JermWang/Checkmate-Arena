@@ -36,6 +36,12 @@ dist-ssr
 # Build outputs
 dist/
 build/
+target/
+programs/match-escrow/target/
+
+# Local Solana keypairs
+.keys/
+
 # Test coverage
 coverage/
 .nyc_output/

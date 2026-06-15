@@ -17,6 +17,40 @@ export const IS_PLACEHOLDER = !import.meta.env.VITE_CHESS_MINT;
 
 export const CHESS_DECIMALS = 6;
 
+const PLACEHOLDER_ESCROW_PROGRAM_ID =
+  "MaTcHeScRoWpRoGrAm111111111111111111111111";
+
+export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID || "";
+export const SOLANA_RPC_URL = import.meta.env.VITE_SOLANA_RPC_URL || "";
+export const MATCH_ESCROW_PROGRAM_ID =
+  import.meta.env.VITE_MATCH_ESCROW_PROGRAM_ID || "";
+export const WAGER_SERVER_AUTHORITY =
+  import.meta.env.VITE_WAGER_SERVER_AUTHORITY || "";
+export const WAGER_TREASURY = import.meta.env.VITE_WAGER_TREASURY || "";
+export const REAL_WAGERS_ENABLED =
+  import.meta.env.VITE_ENABLE_REAL_WAGERS === "true";
+export const WAGER_ESCROW_TRANSACTIONS_ENABLED =
+  import.meta.env.VITE_WAGER_ESCROW_TRANSACTIONS_ENABLED === "true";
+export const CLIENT_ESCROW_SIGNING_IMPLEMENTED = false;
+
+export const WAGER_READINESS_BLOCKERS = [
+  !REAL_WAGERS_ENABLED && "VITE_ENABLE_REAL_WAGERS must be true",
+  !WAGER_ESCROW_TRANSACTIONS_ENABLED &&
+    "VITE_WAGER_ESCROW_TRANSACTIONS_ENABLED must be true",
+  !CLIENT_ESCROW_SIGNING_IMPLEMENTED &&
+    "Client escrow transaction signing is not implemented",
+  !PRIVY_APP_ID && "VITE_PRIVY_APP_ID is missing",
+  !SOLANA_RPC_URL && "VITE_SOLANA_RPC_URL is missing",
+  IS_PLACEHOLDER && "VITE_CHESS_MINT is missing",
+  !MATCH_ESCROW_PROGRAM_ID && "VITE_MATCH_ESCROW_PROGRAM_ID is missing",
+  MATCH_ESCROW_PROGRAM_ID === PLACEHOLDER_ESCROW_PROGRAM_ID &&
+    "VITE_MATCH_ESCROW_PROGRAM_ID is still the placeholder program id",
+  !WAGER_SERVER_AUTHORITY && "VITE_WAGER_SERVER_AUTHORITY is missing",
+  !WAGER_TREASURY && "VITE_WAGER_TREASURY is missing",
+].filter(Boolean) as string[];
+
+export const CAN_CREATE_REAL_WAGERS = WAGER_READINESS_BLOCKERS.length === 0;
+
 export const STAKE_TIERS = [100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
 export const STAKE_MIN = 10;
 export const STAKE_MAX = 1_000_000;

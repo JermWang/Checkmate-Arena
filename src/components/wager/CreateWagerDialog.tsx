@@ -20,6 +20,8 @@ import {
   payoutFromStake,
   generateRoomCode,
   CHESS_MINT,
+  CAN_CREATE_REAL_WAGERS,
+  WAGER_READINESS_BLOCKERS,
 } from "@/config/wager";
 
 interface Props {
@@ -37,8 +39,11 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
   const [spectators, setSpectators] = useState(mode === "public");
   const [ranked, setRanked] = useState(mode === "public");
   const mintLabel = `${CHESS_MINT.slice(0, 4)}...${CHESS_MINT.slice(-4)}`;
+  const readinessMessage = WAGER_READINESS_BLOCKERS[0] ?? "";
 
   const handleCreate = () => {
+    if (!CAN_CREATE_REAL_WAGERS) return;
+
     // TODO: call tRPC `wager.create` → build escrow tx → sign → submit
     if (mode === "private") {
       const code = generateRoomCode();
@@ -194,12 +199,24 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
             </div>
           </div>
 
+          {!CAN_CREATE_REAL_WAGERS && (
+            <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-xs leading-5 text-amber-200">
+              Live wagering is disabled until production escrow and Privy signing are fully configured.
+              Next blocker: {readinessMessage}
+            </div>
+          )}
+
           <Button
             onClick={handleCreate}
-            className="w-full bg-[#14F195] text-black hover:bg-[#14F195]/90"
+            disabled={!CAN_CREATE_REAL_WAGERS}
+            className="w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
             size="lg"
           >
-            {mode === "private" ? "Lock stake & generate code" : "Lock stake & post"}
+            {CAN_CREATE_REAL_WAGERS
+              ? mode === "private"
+                ? "Lock stake & generate code"
+                : "Lock stake & post"
+              : "Live wager config required"}
           </Button>
         </div>
       </DialogContent>

@@ -2,7 +2,11 @@ import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router";
 import { Clock, Coins, ShieldCheck, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { payoutFromStake } from "@/config/wager";
+import {
+  CAN_CREATE_REAL_WAGERS,
+  WAGER_READINESS_BLOCKERS,
+  payoutFromStake,
+} from "@/config/wager";
 
 export default function LobbyPrivateJoin() {
   const [params] = useSearchParams();
@@ -14,8 +18,11 @@ export default function LobbyPrivateJoin() {
   const [tc] = useState("5+3 blitz");
   const [opponent] = useState({ handle: "creator", rating: 1750 });
   const [accepting, setAccepting] = useState(false);
+  const readinessMessage = WAGER_READINESS_BLOCKERS[0] ?? "";
 
   const onAccept = () => {
+    if (!CAN_CREATE_REAL_WAGERS) return;
+
     setAccepting(true);
     // TODO: build & sign accept_match ix, then POST to wager.accept
     setTimeout(() => navigate(`/play?match=${code.toLowerCase()}`), 1200);
@@ -74,11 +81,18 @@ export default function LobbyPrivateJoin() {
             You pay your own network gas when signing.
           </div>
 
+          {!CAN_CREATE_REAL_WAGERS && (
+            <div className="mt-4 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-xs leading-5 text-amber-200">
+              Live wagering is disabled until production escrow and Privy signing are fully configured.
+              Next blocker: {readinessMessage}
+            </div>
+          )}
+
           <Button
             size="lg"
             onClick={onAccept}
-            disabled={accepting || !code}
-            className="mt-4 w-full bg-[#14F195] text-black hover:bg-[#14F195]/90"
+            disabled={accepting || !code || !CAN_CREATE_REAL_WAGERS}
+            className="mt-4 w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {accepting ? (
               <>
@@ -86,7 +100,7 @@ export default function LobbyPrivateJoin() {
                 Locking stake…
               </>
             ) : (
-              "Accept & lock stake"
+              CAN_CREATE_REAL_WAGERS ? "Accept & lock stake" : "Live wager config required"
             )}
           </Button>
         </div>

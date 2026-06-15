@@ -4,7 +4,7 @@ import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
-import { env } from "./lib/env";
+import { env, getWagerReadiness } from "./lib/env";
 import { createOAuthCallbackHandler } from "./kimi/auth";
 import { Paths } from "@contracts/constants";
 import { createNewEpoch } from "./queries/leaderboard";
@@ -35,8 +35,11 @@ app.get("/api/config", (c) =>
     requiredTokenBalance: 0,
     timeControlSeconds: 300,
     epochLengthHours: 24,
+    wager: getWagerReadiness(),
   })
 );
+
+app.get("/api/wager/readiness", (c) => c.json(getWagerReadiness()));
 
 // tRPC handler
 app.use("/api/trpc/*", async (c) => {
