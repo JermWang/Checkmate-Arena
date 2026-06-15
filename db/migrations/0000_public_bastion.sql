@@ -139,7 +139,7 @@ CREATE TABLE "matches" (
 	"allow_spectators" boolean DEFAULT true NOT NULL,
 	"escrow_pda" varchar(255),
 	"escrow_settle_sig" varchar(255),
-	"rake_bps" integer DEFAULT 400 NOT NULL,
+	"rake_bps" integer DEFAULT 200 NOT NULL,
 	"expires_at" timestamp,
 	"started_at" timestamp,
 	"ended_at" timestamp,

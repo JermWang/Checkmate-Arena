@@ -9,6 +9,7 @@ export default function Navbar() {
   const { walletAddress, connected, connect, disconnect, isGuest } = useWallet();
   useAuth();
   const location = useLocation();
+  const isLanding = location.pathname === "/";
 
   const { data: profile } = trpc.profile.get.useQuery(
     { walletAddress: walletAddress! },
@@ -26,7 +27,11 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-md border-b border-white/5">
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-md ${
+          isLanding ? "border-b border-transparent" : "border-b border-white/5"
+        }`}
+      >
         <div className="max-w-[1440px] mx-auto px-3 sm:px-4 md:px-8 h-16 flex items-center justify-between gap-3">
           {/* Logo */}
           <Link to="/" className="flex min-w-0 items-center gap-2 group">
@@ -85,11 +90,11 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={connect}
-                className="flex h-10 items-center gap-2 rounded-full border border-white/20 px-3 text-xs font-medium text-white transition-all duration-300 hover:bg-white hover:text-black sm:px-4"
+                aria-label="Connect wallet"
+                className="flex h-10 w-10 items-center justify-center gap-2 rounded-full border border-white/20 px-0 text-xs font-medium text-white transition-all duration-300 hover:bg-white hover:text-black sm:w-auto sm:px-4"
               >
                 <Wallet className="w-3.5 h-3.5" />
-                <span className="hidden min-[380px]:inline">Connect Wallet</span>
-                <span className="min-[380px]:hidden">Wallet</span>
+                <span className="hidden sm:inline">Connect Wallet</span>
               </button>
             )}
           </div>
@@ -98,7 +103,9 @@ export default function Navbar() {
 
       <nav
         aria-label="Primary mobile navigation"
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#050505]/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-md md:hidden"
+        className={`fixed bottom-0 left-0 right-0 z-50 w-screen max-w-full overflow-hidden bg-[#050505]/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-md md:hidden ${
+          isLanding ? "border-t border-transparent" : "border-t border-white/10"
+        }`}
       >
         <div className="grid grid-cols-5 gap-1">
           {navItems.map((item) => (

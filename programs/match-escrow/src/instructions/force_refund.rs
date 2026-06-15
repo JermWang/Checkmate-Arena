@@ -4,7 +4,7 @@ use anchor_spl::token::{transfer, Mint, Token, TokenAccount, Transfer};
 use crate::errors::EscrowError;
 use crate::state::{MatchAccount, MatchStatus};
 
-/// Emergency-only: refund both sides their original stake without rake.
+/// Emergency-only: refund both sides their original stake without house fee.
 /// Reserved for stuck matches (e.g., server outage exceeding grace window)
 /// and dispute resolutions where neither party is at fault.
 #[derive(Accounts)]

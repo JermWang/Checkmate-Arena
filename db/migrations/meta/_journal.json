@@ -8,6 +8,13 @@
       "when": 1781507853282,
       "tag": "0000_public_bastion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781539200000,
+      "tag": "0001_house_fee_2pct",
+      "breakpoints": true
     }
   ]
 }

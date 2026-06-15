@@ -78,7 +78,7 @@ pub fn handler(ctx: Context<SettleMatch>, result: MatchResult) -> Result<()> {
     let seeds = &[MatchAccount::SEED, match_id.as_ref(), &[bump]];
     let signer = &[&seeds[..]];
 
-    // Always pay rake to treasury first.
+    // Always pay the house fee to treasury first.
     pay(
         &ctx.accounts.token_program,
         &ctx.accounts.match_vault,

@@ -23,8 +23,8 @@ export const STAKE_TIERS = [100, 500, 1_000, 5_000, 10_000, 50_000, 100_000];
 export const STAKE_MIN = 10;
 export const STAKE_MAX = 1_000_000;
 
-/** 4% of pot, taken from total before payout. */
-export const RAKE_BPS = 400;
+/** 2% house fee of pot, taken from total before payout. */
+export const HOUSE_FEE_BPS = 200;
 
 export const TIME_CONTROLS = ["1+0", "3+0", "5+3", "10+5"] as const;
 export type TimeControl = (typeof TIME_CONTROLS)[number];
@@ -57,6 +57,6 @@ export function formatChess(amount: number, opts?: { sign?: boolean }): string {
 
 export function payoutFromStake(stakePerSide: number): number {
   const pot = stakePerSide * 2;
-  const rake = Math.floor((pot * RAKE_BPS) / 10_000);
-  return pot - rake;
+  const houseFee = Math.floor((pot * HOUSE_FEE_BPS) / 10_000);
+  return pot - houseFee;
 }

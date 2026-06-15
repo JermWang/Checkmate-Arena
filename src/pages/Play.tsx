@@ -221,7 +221,7 @@ export default function Play() {
   }, [socket]);
 
   const startDemo = useCallback(async () => {
-    primeGameAudio();
+    void primeGameAudio();
     const { Chess } = await import("chess.js");
     const chess = new Chess();
     chessRef.current = chess;
@@ -382,7 +382,12 @@ export default function Play() {
 
   if (!connected && !isSpectatingRoute && !isDemoMode) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 pt-16">
+      <div
+        className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 pt-16"
+        onPointerDownCapture={() => {
+          void primeGameAudio();
+        }}
+      >
         <div className="w-full max-w-md text-center">
           <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-4">Connect Your Wallet</h1>
@@ -401,7 +406,9 @@ export default function Play() {
             <span className="h-px flex-1 bg-white/10" />
           </div>
           <button
-            onClick={startDemo}
+            onClick={() => {
+              void startDemo();
+            }}
             className="w-full rounded-full border border-white/15 px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/5"
           >
             Try Gameplay Demo

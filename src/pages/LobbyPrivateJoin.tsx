@@ -70,7 +70,8 @@ export default function LobbyPrivateJoin() {
 
           <div className="mt-4 rounded-lg border border-[#14F195]/25 bg-[#14F195]/[0.05] p-3 font-mono text-xs text-[#14F195]">
             Accepting locks {stake.toLocaleString()} $CHESS in escrow. Winner takes{" "}
-            {payoutFromStake(stake).toLocaleString()} (4% rake).
+            {payoutFromStake(stake).toLocaleString()} after the 2% house fee.
+            You pay your own network gas when signing.
           </div>
 
           <Button

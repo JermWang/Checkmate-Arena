@@ -194,7 +194,7 @@ export const matches = pgTable(
     allowSpectators: boolean("allow_spectators").default(true).notNull(),
     escrowPda: varchar("escrow_pda", { length: 255 }),
     escrowSettleSig: varchar("escrow_settle_sig", { length: 255 }),
-    rakeBps: integer("rake_bps").default(400).notNull(),
+    rakeBps: integer("rake_bps").default(200).notNull(),
     expiresAt: timestamp("expires_at"),
 
     startedAt: timestamp("started_at"),

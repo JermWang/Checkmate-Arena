@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-/// Rake in basis points (4%).
-pub const RAKE_BPS: u64 = 400;
+/// House fee in basis points (2%).
+pub const RAKE_BPS: u64 = 200;
 pub const BPS_DENOMINATOR: u64 = 10_000;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
@@ -32,7 +32,7 @@ pub struct MatchAccount {
     /// Server's settle-authority pubkey (set at create time).
     pub server_authority: Pubkey,
 
-    /// Treasury PDA that receives rake.
+    /// Treasury PDA that receives the house fee.
     pub treasury: Pubkey,
 
     /// True once creator deposit completed.

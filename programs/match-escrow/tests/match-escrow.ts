@@ -20,7 +20,7 @@ describe("match-escrow", () => {
   const program = anchor.workspace.MatchEscrow as Program<MatchEscrow>;
 
   const STAKE = new anchor.BN(1_000_000_000); // 1000 $CHESS @ 6 decimals
-  const RAKE_BPS = 400n;
+  const HOUSE_FEE_BPS = 200n;
 
   let mint: PublicKey;
   let creator: Keypair;
@@ -72,7 +72,7 @@ describe("match-escrow", () => {
     await mintTo(provider.connection, creator, mint, challengerAta, creator, 5_000_000_000n);
   });
 
-  it("happy path: create → accept → settle (creator wins) pays correct rake + payout", async () => {
+  it("happy path: create → accept → settle (creator wins) pays correct house fee + payout", async () => {
     const matchId = Array.from(randomBytes(16));
     const [matchPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("match"), Buffer.from(matchId)],
@@ -130,14 +130,14 @@ describe("match-escrow", () => {
       .rpc();
 
     const pot = BigInt(STAKE.toString()) * 2n;
-    const rake = (pot * RAKE_BPS) / 10_000n;
-    const net = pot - rake;
+    const houseFee = (pot * HOUSE_FEE_BPS) / 10_000n;
+    const net = pot - houseFee;
 
     const creatorAfter = (await getAccount(provider.connection, creatorAta)).amount;
     const treasuryAfter = (await getAccount(provider.connection, treasuryAta)).amount;
 
     assert.equal(creatorAfter - creatorBefore, net, "creator should receive pot net of rake");
-    assert.equal(treasuryAfter - treasuryBefore, rake, "treasury should receive rake");
+    assert.equal(treasuryAfter - treasuryBefore, houseFee, "treasury should receive house fee");
   });
 
   it("rejects accept_match when challenger == creator", async () => {

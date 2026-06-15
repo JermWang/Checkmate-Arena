@@ -61,7 +61,8 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
             {mode === "private" ? "Create private room" : "Post public challenge"}
           </DialogTitle>
           <DialogDescription className="text-[#8A8F98]">
-            Both sides lock the same stake. Winner takes the pot minus a 4% rake.
+            Both sides lock the same stake. Winner takes the pot minus a 2% house fee.
+            Each player pays their own network gas.
           </DialogDescription>
         </DialogHeader>
 
@@ -186,7 +187,8 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
               <span className="text-[#14F195]">
                 {payoutFromStake(stake).toLocaleString()}
               </span>{" "}
-              ({" "}<span className="text-white">{(stake * 2).toLocaleString()}</span> pot · 4% rake){" "}.
+              ({" "}<span className="text-white">{(stake * 2).toLocaleString()}</span> pot · 2% house fee){" "}.
+              You pay your own network gas when signing.
             </div>
           </div>
 

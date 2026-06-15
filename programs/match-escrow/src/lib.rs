@@ -33,7 +33,7 @@ pub mod match_escrow {
         instructions::cancel_match::handler(ctx)
     }
 
-    /// Server-authority-only settlement. Pays winner minus rake, or refunds both on draw.
+    /// Server-authority-only settlement. Pays winner minus house fee, or splits net pot on draw.
     pub fn settle_match(ctx: Context<SettleMatch>, result: MatchResult) -> Result<()> {
         instructions::settle_match::handler(ctx, result)
     }

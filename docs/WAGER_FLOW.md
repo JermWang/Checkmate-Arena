@@ -26,8 +26,8 @@ match_escrow PDA   seeds = ["match", match_id (16 bytes)]
                    }
 
 match_vault ATA    associated token account for match_escrow PDA, holds stake_mint
-treasury_pda       single global PDA receiving rake
-rake_vault ATA     ATA for treasury_pda holding stake_mint
+treasury_pda       single global PDA receiving the house fee
+house_fee_vault ATA ATA for treasury_pda holding stake_mint
 ```
 
 ---
@@ -62,15 +62,15 @@ rake_vault ATA     ATA for treasury_pda holding stake_mint
 - Args: `match_id`, `result enum { CreatorWins, ChallengerWins, Draw }`, `result_sig` (server signature over match outcome bytes).
 - Effects:
   - Verifies `status = Live`.
-  - Computes rake = `2 * stake_amount * 4 / 100`.
-  - On `Draw`: refunds each player `stake_amount * 96/100`, sends rake to `rake_vault`.
-  - On `Wins`: sends `(2 * stake_amount - rake)` to winner ATA, sends rake to `rake_vault`.
+  - Computes house fee = `2 * stake_amount * 2 / 100`.
+  - On `Draw`: refunds each player `stake_amount * 98/100`, sends house fee to `house_fee_vault`.
+  - On `Wins`: sends `(2 * stake_amount - house_fee)` to winner ATA, sends house fee to `house_fee_vault`.
   - Sets `status = Settled`.
 
 ### 3.5 `force_refund` (emergency)
 - Signer: server authority.
 - Used only when a match cannot complete (server outage > 24h, dispute resolution).
-- Refunds each side full stake, no rake. Status → `Cancelled`.
+- Refunds each side full stake, no house fee. Status → `Cancelled`.
 
 ---
 
@@ -117,7 +117,7 @@ USER FLOW                          SERVER FLOW                       ON-CHAIN
                                    - calls settle_match with authority
                                                                   ►  settle_match
                                                                      pot → winner (or split)
-                                                                     rake → treasury
+                                                                     house fee → treasury
                                    ◄────── tx confirmed ──────────
                                    matches.status = settled
                                    broadcast result + replay link

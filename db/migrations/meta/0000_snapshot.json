@@ -1049,7 +1049,7 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": 400
+          "default": 200
         },
         "expires_at": {
           "name": "expires_at",

@@ -87,120 +87,119 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-['Space_Grotesk',sans-serif]">
-      <section
-        ref={heroRef}
-        className="relative isolate flex min-h-[92svh] items-center overflow-hidden px-4 pb-10 pt-20 sm:px-6 lg:px-8"
-      >
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_18%,rgba(20,241,149,0.16),transparent_34%),radial-gradient(circle_at_20%_80%,rgba(124,77,255,0.10),transparent_30%)]" />
-        <div className="absolute inset-x-0 bottom-0 -z-10 h-32 bg-gradient-to-t from-[#050505] to-transparent" />
-
-        <div className="mx-auto grid w-full max-w-[1180px] items-center gap-7 lg:grid-cols-[0.82fr_1fr] lg:gap-12">
-          <div
-            className="relative order-1 mx-auto aspect-square w-full max-w-[230px] sm:max-w-[280px] md:max-w-[330px] lg:order-2 lg:max-w-[430px]"
-            style={{ transform: `translateY(${Math.min(scrollY * 0.035, 18)}px)` }}
-          >
-            <div className="absolute inset-8 rounded-full bg-[#14F195]/10 blur-3xl" />
-            <Hero3D
-              pieceKey="wN"
-              png="/hero-knight.png"
-              alt="Chess Knight"
-              pieceHeight={2.75}
-              className="relative size-full drop-shadow-[0_28px_80px_rgba(20,241,149,0.20)]"
-            />
-          </div>
-
-          <div className="order-2 mx-auto max-w-[720px] text-center lg:order-1 lg:mx-0 lg:text-left">
-            <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-[#8A8F98]">
-              Ranked chess on Solana
-            </p>
-            <h1 className="text-4xl font-bold leading-[0.96] tracking-normal sm:text-5xl md:text-6xl lg:text-7xl">
-              Enter the
-              <span className="block text-[#14F195]">King of Games</span>
-            </h1>
-            <p className="mx-auto mt-5 max-w-[560px] text-base leading-7 text-[#A6ABB4] sm:text-lg lg:mx-0">
-              Connect your wallet to enter ranked matchmaking, chase the daily leaderboard,
-              or opt into escrow-backed $CHESS wagers.
-            </p>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              <Link
-                to="/play"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
-              >
-                <Swords className="size-4" />
-                Play
-                <ChevronRight className="size-4" />
-              </Link>
-              <Link
-                to="/leaderboard"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 px-6 text-sm font-medium text-white transition-colors hover:bg-white/5"
-              >
-                <Trophy className="size-4" />
-                View Leaderboard
-              </Link>
-              <button
-                type="button"
-                onClick={copyContractAddress}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-6 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
-              >
-                {copiedContract ? <Check className="size-4" /> : <Copy className="size-4" />}
-                {copiedContract ? "Copied" : "Copy Contract"}
-              </button>
+      <div className="landing-atmosphere landing-atmosphere--intro">
+        <section
+          ref={heroRef}
+          className="landing-hero landing-section relative flex min-h-[92svh] items-center overflow-hidden px-4 pb-10 pt-20 sm:px-6 lg:px-8"
+        >
+          <div className="relative z-10 mx-auto grid w-full max-w-[1180px] items-center gap-7 lg:grid-cols-[0.82fr_1fr] lg:gap-12">
+            <div
+              className="relative order-1 mx-auto aspect-square w-full max-w-[230px] sm:max-w-[280px] md:max-w-[330px] lg:order-2 lg:max-w-[430px]"
+              style={{ transform: `translateY(${Math.min(scrollY * 0.035, 18)}px)` }}
+            >
+              <div className="absolute -inset-8 rounded-full bg-[#14F195]/[0.18] blur-[72px]" />
+              <div className="absolute inset-10 rounded-full bg-[#7c4dff]/[0.14] blur-[54px]" />
+              <Hero3D
+                pieceKey="wN"
+                png="/hero-knight.png"
+                alt="Chess Knight"
+                pieceHeight={2.75}
+                className="relative size-full drop-shadow-[0_30px_92px_rgba(20,241,149,0.34)]"
+              />
             </div>
 
-            <p className="mt-8 text-[11px] uppercase tracking-[0.26em] text-[#666C76]">
-              Powered by Solana
-            </p>
+            <div className="order-2 mx-auto max-w-[720px] text-center lg:order-1 lg:mx-0 lg:text-left">
+              <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-[#8A8F98]">
+                Ranked chess on Solana
+              </p>
+              <h1 className="text-4xl font-bold leading-[0.96] tracking-normal sm:text-5xl md:text-6xl lg:text-7xl">
+                Enter the
+                <span className="block text-[#14F195]">King of Games</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-[560px] text-base leading-7 text-[#A6ABB4] sm:text-lg lg:mx-0">
+                Connect your wallet to enter ranked matchmaking, chase the daily leaderboard,
+                or opt into escrow-backed $CHESS wagers.
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+                <Link
+                  to="/play"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
+                >
+                  <Swords className="size-4" />
+                  Play
+                  <ChevronRight className="size-4" />
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 px-6 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                >
+                  <Trophy className="size-4" />
+                  View Leaderboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={copyContractAddress}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-6 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
+                >
+                  {copiedContract ? <Check className="size-4" /> : <Copy className="size-4" />}
+                  {copiedContract ? "Copied" : "Copy Contract"}
+                </button>
+              </div>
+
+              <p className="mt-8 text-[11px] uppercase tracking-[0.26em] text-[#666C76]">
+                Powered by Solana
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="border-t border-white/5 px-4 py-16 sm:px-6 md:py-20 lg:px-8">
-        <div className="mx-auto max-w-[1180px]">
-          <SectionHeader
-            eyebrow="Arena loop"
-            title="How It Works"
-            description="A compact path from wallet connection to ranked play and rewards."
-          />
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((step) => (
-              <StepCard key={step.number} {...step} />
-            ))}
+        <section className="landing-section landing-panel px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+          <div className="mx-auto max-w-[1180px]">
+            <SectionHeader
+              eyebrow="Arena loop"
+              title="How It Works"
+              description="A compact path from wallet connection to ranked play and rewards."
+            />
+            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {steps.map((step) => (
+                <StepCard key={step.number} {...step} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <PieceFeature
-        label="Position"
-        title="Every move has weight."
-        copy="The board stays fast and readable while the backend records the match, validates moves, and updates ratings."
-        word="KING"
-        pieceKey="wK"
-        png="/king-piece.png"
-        alt="King Piece"
-        align="left"
-        offset={scrollY}
-      />
+        <PieceFeature
+          label="Position"
+          title="Every move has weight."
+          copy="The board stays fast and readable while the backend records the match, validates moves, and updates ratings."
+          word="KING"
+          pieceKey="wK"
+          png="/king-piece.png"
+          alt="King Piece"
+          align="left"
+          offset={scrollY}
+        />
 
-      <PieceFeature
-        label="Leverage"
-        title="Skill is your edge."
-        copy="Play ranked for free, then step into public challenges or private rooms when you want stakes on the board."
-        word="QUEEN"
-        pieceKey="wQ"
-        png="/queen-piece.png"
-        alt="Queen Piece"
-        align="right"
-        offset={scrollY}
-      />
+        <PieceFeature
+          label="Leverage"
+          title="Skill is your edge."
+          copy="Play ranked for free, then step into public challenges or private rooms when you want stakes on the board."
+          word="QUEEN"
+          pieceKey="wQ"
+          png="/queen-piece.png"
+          alt="Queen Piece"
+          align="right"
+          offset={scrollY}
+        />
+      </div>
 
-      <section className="bg-[#f6f8f7] px-4 py-16 text-[#050505] sm:px-6 md:py-20 lg:px-8">
+      <section className="landing-rewards landing-section px-4 py-16 text-white sm:px-6 md:py-20 lg:px-8">
         <div className="mx-auto max-w-[1180px]">
           <SectionHeader
             eyebrow="Daily pool"
             title="Reward Rankings"
             description="50% of daily creator fees distributed to top players."
-            dark={false}
           />
 
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -209,7 +208,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="mt-10 overflow-hidden rounded-full bg-black/10">
+          <div className="mt-10 overflow-hidden rounded-full bg-white/10">
             <div className="flex h-3">
               <div className="bg-[#14F195]" style={{ width: "25%" }} />
               <div className="bg-[#10c77a]" style={{ width: "18%" }} />
@@ -218,77 +217,80 @@ export default function Home() {
               <div className="bg-[#9ca3af]" style={{ width: "33%" }} />
             </div>
           </div>
-          <div className="mt-2 flex justify-between text-xs text-[#66717D]">
+          <div className="mt-2 flex justify-between text-xs text-[#8A8F98]">
             <span>1st: 25%</span>
             <span>Total Pool: 100%</span>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-white/5 px-4 py-16 sm:px-6 md:py-20 lg:px-8">
-        <div className="mx-auto max-w-[980px]">
-          <SectionHeader
-            eyebrow="Opt-in $CHESS"
-            title="Or play for keeps."
-            description="Ranked is free. If you want stakes on the board, the lobby has public challenges and private rooms. Pots settle on-chain in $CHESS."
-          />
-
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
-            <ModeCard
-              to="/lobby"
-              icon={<Coins className="size-7 text-[#14F195]" />}
-              title="Public lobby"
-              description="Browse open challenges. Snap-to-tier stakes from 100 up to 100,000 $CHESS. Accept any challenge to lock matching stakes."
-              action="Open lobby"
+      <div className="landing-atmosphere landing-atmosphere--closing">
+        <section className="landing-section px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+          <div className="mx-auto max-w-[980px]">
+            <SectionHeader
+              eyebrow="Opt-in $CHESS"
+              title="Or play for keeps."
+              description="Ranked is free. If you want stakes on the board, the lobby has public challenges and private rooms. Pots settle on-chain in $CHESS."
             />
-            <ModeCard
-              to="/lobby/private"
-              icon={<Lock className="size-7 text-[#14F195]" />}
-              title="Private room"
-              description="Generate a single-use 6-character code for friends, streams, and brackets. No public listing, 15-minute expiry."
-              action="Create room"
-            />
+
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
+              <ModeCard
+                to="/lobby"
+                icon={<Coins className="size-7 text-[#14F195]" />}
+                title="Public lobby"
+                description="Browse open challenges. Snap-to-tier stakes from 100 up to 100,000 $CHESS. Accept any challenge to lock matching stakes."
+                action="Open lobby"
+              />
+              <ModeCard
+                to="/lobby/private"
+                icon={<Lock className="size-7 text-[#14F195]" />}
+                title="Private room"
+                description="Generate a single-use 6-character code for friends, streams, and brackets. No public listing, 15-minute expiry."
+                action="Create room"
+              />
+            </div>
+
+            <p className="mt-7 text-center text-xs text-[#8A8F98]">
+              Winner takes the pot minus a 2% house fee. Players pay their own network gas.
+              50% of the house fee feeds the weekly leaderboard pool.
+            </p>
           </div>
+        </section>
 
-          <p className="mt-7 text-center text-xs text-[#8A8F98]">
-            Winner takes the pot minus a 4% rake. 50% of rake feeds the weekly leaderboard pool.
-          </p>
-        </div>
-      </section>
-
-      <section className="border-t border-white/5 px-4 py-16 sm:px-6 md:py-20 lg:px-8">
-        <div className="mx-auto max-w-[760px] text-center">
-          <Shield className="mx-auto mb-5 size-10 text-[#14F195]" />
-          <h2 className="text-3xl font-bold leading-tight tracking-normal md:text-4xl">
-            Server-Validated. Anti-Cheat Protected.
-          </h2>
-          <p className="mt-4 text-base leading-7 text-[#A6ABB4] md:text-lg">
-            Every ranked match runs on our authoritative server with chess.js move validation.
-            Suspicious activity is flagged and reviewed before rewards are distributed.
-          </p>
-          <Link
-            to="/play"
-            className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195] px-6 text-sm font-semibold text-[#14F195] transition-colors hover:bg-[#14F195] hover:text-black"
-          >
-            <Swords className="size-4" />
-            {connected ? "Play Now" : "Join the Arena"}
-          </Link>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/5 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[1180px] flex-col items-center justify-between gap-3 text-center md:flex-row md:text-left">
-          <div className="flex items-center gap-2">
-            <Swords className="size-4 text-[#14F195]" />
-            <span className="text-xs uppercase tracking-[0.24em] text-[#8A8F98]">
-              Checkmate Arena
-            </span>
+        <section className="landing-section landing-panel px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+          <div className="mx-auto max-w-[760px] text-center">
+            <Shield className="mx-auto mb-5 size-10 text-[#14F195]" />
+            <h2 className="text-3xl font-bold leading-tight tracking-normal md:text-4xl">
+              Server-Validated. Anti-Cheat Protected.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-[#A6ABB4] md:text-lg">
+              Every ranked match runs on our authoritative server with chess.js move validation.
+              Suspicious activity is flagged and reviewed before rewards are distributed.
+            </p>
+            <Link
+              to="/play"
+              className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195] px-6 text-sm font-semibold text-[#14F195] transition-colors hover:bg-[#14F195] hover:text-black"
+            >
+              <Swords className="size-4" />
+              {connected ? "Play Now" : "Join the Arena"}
+            </Link>
           </div>
-          <p className="text-xs text-[#8A8F98]">
-            Ranked chess on Solana. Ranked is free; wagering is opt-in.
-          </p>
-        </div>
-      </footer>
+        </section>
+
+        <footer className="landing-section landing-panel px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-[1180px] flex-col items-center justify-between gap-3 text-center md:flex-row md:text-left">
+            <div className="flex items-center gap-2">
+              <Swords className="size-4 text-[#14F195]" />
+              <span className="text-xs uppercase tracking-[0.24em] text-[#8A8F98]">
+                Checkmate Arena
+              </span>
+            </div>
+            <p className="text-xs text-[#8A8F98]">
+              Ranked chess on Solana. Ranked is free; wagering is opt-in.
+            </p>
+          </div>
+        </footer>
+      </div>
     </div>
   );
 }
@@ -395,7 +397,7 @@ function PieceFeature({
   );
 
   return (
-    <section className="overflow-hidden border-t border-white/5 px-4 py-16 sm:px-6 md:py-20 lg:px-8">
+    <section className="landing-section landing-panel overflow-hidden px-4 py-16 sm:px-6 md:py-20 lg:px-8">
       <div className="mx-auto grid max-w-[1080px] items-center gap-8 md:grid-cols-2">
         {align === "left" ? (
           <>
@@ -425,12 +427,12 @@ function RewardCard({
   highlight?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border p-5 transition-colors ${highlight ? "border-[#14F195]/45 bg-[#14F195]/10" : "border-black/10 bg-white hover:border-[#14F195]/35"}`}>
+    <div className={`rounded-lg border p-5 transition-colors ${highlight ? "border-[#14F195]/45 bg-[#14F195]/10" : "border-white/5 bg-white/[0.025] hover:border-[#14F195]/25 hover:bg-white/[0.05]"}`}>
       <div className="mb-2 flex items-baseline justify-between gap-4">
-        <span className={`text-xl font-bold ${highlight ? "text-[#07995d]" : "text-[#050505]"}`}>{rank}</span>
+        <span className={`text-xl font-bold ${highlight ? "text-[#14F195]" : "text-white"}`}>{rank}</span>
         <span className="text-2xl font-bold">{percentage}</span>
       </div>
-      <p className="text-sm leading-6 text-[#66717D]">{description}</p>
+      <p className="text-sm leading-6 text-[#A6ABB4]">{description}</p>
     </div>
   );
 }

@@ -69,8 +69,9 @@ export const profileRouter = createRouter({
         const stake = Number(m.stakeAmount ?? 0);
         if (stake > 0 && (m.matchMode === "wager_public" || m.matchMode === "wager_private")) {
           wagerStaked += stake;
-          const rake = Math.floor((stake * (m.rakeBps ?? 400)) / 10000);
-          if (m.winnerWallet === input.walletAddress) wagerEarnings += stake - rake;
+          const pot = stake * 2;
+          const houseFee = Math.floor((pot * (m.rakeBps ?? 200)) / 10000);
+          if (m.winnerWallet === input.walletAddress) wagerEarnings += stake - houseFee;
           else if (m.resultType !== "draw") wagerEarnings -= stake;
         }
       }

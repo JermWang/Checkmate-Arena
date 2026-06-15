@@ -1,6 +1,6 @@
 # CHECKMATE ARENA — Functional Specification
 
-A Solana-native PvP chess arena. Players queue casual matches for free, or stake the native **$CHESS** SPL token in **public-lobby** or **private room-code** wagered matches. Winner takes the pot, minus a small house rake that funds buybacks/burns.
+A Solana-native PvP chess arena. Players queue casual matches for free, or stake the native **$CHESS** SPL token in **public-lobby** or **private room-code** wagered matches. Winner takes the pot, minus a small house fee that funds buybacks/burns.
 
 > **Token status:** `$CHESS` SPL mint **has not launched**. The app is built so every wager touchpoint reads the mint from a single config constant. Until the mint exists, wager mode runs in **"Practice Pot" mode** using a devnet placeholder mint so the UX is fully exercised pre-launch. Flip a single env var on launch day → live.
 
@@ -13,7 +13,7 @@ A Solana-native PvP chess arena. Players queue casual matches for free, or stake
 | **Fair** | On-chain escrow, deterministic move validation server-side, signed move log. No "the server says you lost". |
 | **Fast** | 90-second average lobby → first move. Wallet pre-warmed, deposits batched. |
 | **Loud** | Big numbers, big sounds, kill-cam style checkmate replay. This is an **arena**, not chess.com. |
-| **Sticky** | ELO, daily missions, leaderboards with weekly $CHESS prize pool from rake. |
+| **Sticky** | ELO, daily missions, leaderboards with weekly $CHESS prize pool from house fees. |
 
 ---
 
@@ -33,7 +33,7 @@ A Solana-native PvP chess arena. Players queue casual matches for free, or stake
 /leaderboard            Global + weekly prize-pool standings
 /missions               Daily/weekly challenges
 /shop                   Cosmetic board skins, piece sets, profile frames
-/admin                  (internal) match disputes, rake address, mint config
+/admin                  (internal) match disputes, house fee address, mint config
 ```
 
 ---
@@ -62,7 +62,7 @@ A Solana-native PvP chess arena. Players queue casual matches for free, or stake
 - Private rooms do **not** appear in any public lobby, do **not** affect ELO unless creator toggles "ranked" on.
 
 ### 3.5 Tournament (v2, post-launch)
-- Bracketed events, weekly prize pool from rake. Out of scope for v1 build.
+- Bracketed events, weekly prize pool from house fees. Out of scope for v1 build.
 
 ---
 
@@ -76,8 +76,8 @@ Accept   → challenger signs deposit tx (matching stake locked)
 Start    → server emits start signal once both deposits confirmed
 Play     → moves validated server-side, signed and stored
 Result   → checkmate / resign / timeout / draw
-Settle   → escrow PDA releases pot to winner minus rake
-           draw → both deposits refunded minus tiny network fee
+Settle   → escrow PDA releases pot to winner minus house fee
+           draw → both deposits refunded minus house fee; players pay their own network gas
 ```
 
 ### 4.2 On-chain components
@@ -85,7 +85,8 @@ Settle   → escrow PDA releases pot to winner minus rake
 - **Escrow program (Anchor)** with a single PDA per match: `["match", match_id]`.
 - Instructions: `create_match`, `accept_match`, `cancel_match` (creator, pre-accept only), `settle_match` (server authority, signed result), `refund_draw`.
 - **Server authority keypair** is the only signer that can `settle_match`. Stored in a KMS; rotated quarterly.
-- **Rake** = 4% of pot, sent to `treasury_pda`. Of that: 50% → weekly leaderboard pool, 30% → buyback wallet, 20% → ops.
+- **House fee** = 2% of pot, sent to `treasury_pda`. Of that: 50% → weekly leaderboard pool, 30% → buyback wallet, 20% → ops.
+- **Network gas** is paid by the wallet that signs each wager transaction. The house hot wallet does not subsidize player create/accept gas.
 
 ### 4.3 Anti-grief rules
 

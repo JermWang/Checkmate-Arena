@@ -10,7 +10,7 @@ const ROOM_CODE_LENGTH = 6;
 const ROOM_CODE_TTL_MS = 15 * 60 * 1000;
 const MIN_STAKE = 10;
 const MAX_STAKE = 1_000_000;
-const RAKE_BPS_DEFAULT = 400;
+const HOUSE_FEE_BPS_DEFAULT = 200;
 
 function generateRoomCode(): string {
   let code = "";
@@ -93,7 +93,7 @@ export const wagerRouter = createRouter({
           isPrivate: input.isPrivate,
           roomCode,
           allowSpectators: input.isPrivate ? input.allowSpectators : true,
-          rakeBps: RAKE_BPS_DEFAULT,
+          rakeBps: HOUSE_FEE_BPS_DEFAULT,
           expiresAt,
         })
         .returning({ id: matches.id });

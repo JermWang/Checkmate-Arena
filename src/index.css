@@ -36,6 +36,7 @@
 
   body {
     @apply bg-[#050505] text-white antialiased;
+    overflow-x: hidden;
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
 
@@ -138,6 +139,77 @@
 
 .animate-pulse-glow {
   animation: pulseGlow 3s ease-in-out infinite;
+}
+
+/* Landing atmosphere */
+.landing-atmosphere {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #050505 0%, #070807 45%, #050505 100%);
+}
+
+.landing-atmosphere::before,
+.landing-atmosphere::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.landing-atmosphere::before {
+  background:
+    radial-gradient(ellipse at 54% 8%, rgba(20, 241, 149, 0.22) 0%, rgba(20, 241, 149, 0.08) 23%, transparent 46%),
+    radial-gradient(ellipse at 18% 34%, rgba(124, 77, 255, 0.15) 0%, rgba(124, 77, 255, 0.055) 25%, transparent 55%),
+    radial-gradient(ellipse at 86% 48%, rgba(255, 207, 107, 0.09) 0%, transparent 36%),
+    radial-gradient(ellipse at 48% 84%, rgba(20, 241, 149, 0.11) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, transparent 44%, rgba(0, 0, 0, 0.28) 100%);
+  filter: saturate(1.2);
+  mix-blend-mode: screen;
+  opacity: 0.88;
+}
+
+.landing-atmosphere--closing::before {
+  background:
+    radial-gradient(ellipse at 18% 16%, rgba(20, 241, 149, 0.14) 0%, rgba(20, 241, 149, 0.055) 25%, transparent 52%),
+    radial-gradient(ellipse at 82% 30%, rgba(124, 77, 255, 0.14) 0%, rgba(124, 77, 255, 0.05) 24%, transparent 54%),
+    radial-gradient(ellipse at 50% 86%, rgba(255, 207, 107, 0.075) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 46%, rgba(0, 0, 0, 0.32) 100%);
+}
+
+.landing-atmosphere::after {
+  background:
+    repeating-radial-gradient(circle at 17% 23%, rgba(255, 255, 255, 0.2) 0 0.5px, transparent 0.75px 2.5px),
+    repeating-radial-gradient(circle at 74% 61%, rgba(20, 241, 149, 0.12) 0 0.45px, transparent 0.7px 2.7px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 74%, rgba(0, 0, 0, 0.4)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 4px);
+  background-size: 180px 180px, 220px 220px, 100% 100%, 100% 100%;
+  mix-blend-mode: overlay;
+  opacity: 0.34;
+}
+
+.landing-section {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-panel::before {
+  display: none;
+  content: none;
+}
+
+.landing-rewards {
+  background:
+    radial-gradient(ellipse at 50% 8%, rgba(20, 241, 149, 0.085) 0%, transparent 42%),
+    radial-gradient(ellipse at 82% 54%, rgba(124, 77, 255, 0.07) 0%, transparent 38%),
+    linear-gradient(180deg, #050505 0%, #060706 48%, #050505 100%);
+}
+
+.landing-hero::after {
+  display: none;
+  content: none;
 }
 
 /* Stagger delays */
