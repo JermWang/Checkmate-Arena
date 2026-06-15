@@ -23,13 +23,24 @@ const usernameSchema = z
     message: "Use 3-20 letters, numbers, _ or -",
   });
 
-// Avatar: an https URL (preset/generated or user-supplied). Capped length.
+// Avatar: either an https URL (preset/generated or user-supplied) OR an uploaded
+// image sent as a data: URL. Uploads are compressed client-side (downscaled to a
+// small thumbnail), so the stored string stays tiny; MAX_AVATAR_LEN is a safety
+// ceiling for the DB, not the user-facing upload limit (that's 5 MB pre-compression).
+const HTTPS_RE = /^https:\/\/[^\s]+$/;
+const DATA_IMAGE_RE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
+const MAX_AVATAR_LEN = 2_000_000; // ~1.5 MB of base64; compressed avatars are far smaller
+
 const avatarSchema = z
   .string()
   .trim()
-  .max(500)
-  .url()
-  .refine((u) => u.startsWith("https://"), { message: "Avatar must be an https URL" });
+  .max(MAX_AVATAR_LEN, { message: "Image is too large after processing." })
+  .refine((u) => HTTPS_RE.test(u) || DATA_IMAGE_RE.test(u), {
+    message: "Avatar must be an https link or an uploaded image.",
+  })
+  .refine((u) => !HTTPS_RE.test(u) || u.length <= 500, {
+    message: "Avatar link is too long (max 500 characters).",
+  });
 
 export const profileRouter = createRouter({
   /** Full public profile incl. computed stats, head-to-head matchups, earnings. */

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, Link } from "react-router";
 import { trpc } from "@/providers/trpc";
 import { getRatingBucket } from "@/config/game";
@@ -6,8 +6,33 @@ import { useWallet } from "@/components/wallet/WalletProvider";
 import { avatarUrl, displayName, shortWallet, avatarPresets } from "@/lib/profile";
 import {
   User, Trophy, Swords, TrendingUp, TrendingDown, Minus, ArrowLeft,
-  Pencil, Coins, Flame, Target,
+  Pencil, Coins, Flame, Target, Upload,
 } from "lucide-react";
+
+const MAX_AVATAR_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB, pre-compression
+
+/**
+ * Downscale a user-selected image to a small square-ish thumbnail and return a
+ * compressed data URL. A multi-MB upload becomes a ~20-40 KB WebP/JPEG so it
+ * stores inline in the profile without bloating the DB or the wire.
+ */
+async function fileToCompressedDataUrl(file: File, max = 256, quality = 0.85): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas is not supported in this browser.");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  // Prefer WebP; fall back to JPEG if the browser ignores the requested type.
+  let url = canvas.toDataURL("image/webp", quality);
+  if (!url.startsWith("data:image/webp")) url = canvas.toDataURL("image/jpeg", quality);
+  return url;
+}
 
 export default function Profile() {
   const { wallet } = useParams<{ wallet: string }>();
@@ -242,7 +267,33 @@ function ProfileEditor({
   const [username, setUsername] = useState(initial.username ?? "");
   const [bio, setBio] = useState(initial.bio ?? "");
   const [avatar, setAvatar] = useState(initial.avatar ?? "");
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const presets = avatarPresets(wallet);
+
+  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setUploadError(null);
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_UPLOAD_BYTES) {
+      setUploadError(`Image must be under 5 MB (yours is ${(file.size / 1024 / 1024).toFixed(1)} MB).`);
+      return;
+    }
+    try {
+      setUploading(true);
+      setAvatar(await fileToCompressedDataUrl(file));
+    } catch {
+      setUploadError("Couldn't process that image. Try a different file.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const update = trpc.profile.update.useMutation({
     onSuccess: async () => {
@@ -269,7 +320,7 @@ function ProfileEditor({
         <h2 className="text-lg font-semibold mb-4">Edit Profile</h2>
 
         <div className="flex items-center gap-3 mb-4">
-          <img src={avatarUrl(avatar, wallet)} alt="" className="w-14 h-14 rounded-full bg-white/5 border border-white/10" />
+          <img src={avatarUrl(avatar, wallet)} alt="" className="w-14 h-14 rounded-full bg-white/5 border border-white/10 object-cover" />
           <div className="flex flex-wrap gap-1.5">
             {presets.map((p) => (
               <button
@@ -284,7 +335,24 @@ function ProfileEditor({
           </div>
         </div>
 
-        <label className="block text-xs text-[#8A8F98] mb-1">Avatar URL (https)</label>
+        <div className="mb-3">
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPickFile} />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-white/15 text-xs hover:bg-white/5 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              {uploading ? "Processing…" : "Upload image"}
+            </button>
+            <span className="text-[11px] text-[#8A8F98]">PNG, JPG, GIF or WebP · under 5 MB</span>
+          </div>
+          {uploadError && <p className="text-xs text-red-400 mt-1.5">{uploadError}</p>}
+        </div>
+
+        <label className="block text-xs text-[#8A8F98] mb-1">Or paste an avatar URL (https)</label>
         <input
           value={avatar}
           onChange={(e) => setAvatar(e.target.value)}
