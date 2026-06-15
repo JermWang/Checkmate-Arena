@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { GAME_CONFIG, getRatingBucket } from "@/config/game";
-import { Swords, Shield, LogOut, RotateCcw, Flag } from "lucide-react";
+import { Swords, Shield, LogOut, RotateCcw, Flag, Eye } from "lucide-react";
 import type { ServerToClientEvents, ClientToServerEvents } from "../../contracts/types";
 import { io, type Socket } from "socket.io-client";
 import { Board3D } from "@/components/three/Board3D";
 import type { Chess, Move, Square } from "chess.js";
+import { useSearchParams } from "react-router";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
   import.meta.env.DEV ? "http://localhost:3001" : window.location.origin
@@ -13,11 +14,17 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
 
 export default function Play() {
   const { walletAddress, connected, connect, checkEligibility } = useWallet();
-  const [gameState, setGameState] = useState<"idle" | "checking" | "ineligible" | "queue" | "matched" | "playing" | "ended">("idle");
+  const [searchParams] = useSearchParams();
+  const spectateParam = searchParams.get("spectate");
+  const spectateMatchId = spectateParam ? Number(spectateParam) : null;
+  const isSpectatingRoute = Number.isFinite(spectateMatchId) && (spectateMatchId ?? 0) > 0;
+  const [gameState, setGameState] = useState<"idle" | "checking" | "ineligible" | "queue" | "matched" | "playing" | "spectating" | "ended">("idle");
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
   const [matchId, setMatchId] = useState<number | null>(null);
   const [color, setColor] = useState<"white" | "black">("white");
   const [opponent, setOpponent] = useState<string>("");
+  const [whitePlayer, setWhitePlayer] = useState<string>("");
+  const [blackPlayer, setBlackPlayer] = useState<string>("");
   const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [legalMoves, setLegalMoves] = useState<string[]>([]);
@@ -26,8 +33,19 @@ export default function Play() {
   const [moveHistory, setMoveHistory] = useState<string[]>([]);
   const [result, setResult] = useState<string | null>(null);
   const [ratingChange, setRatingChange] = useState(0);
+  const [spectatorCount, setSpectatorCount] = useState(0);
   const [queuePosition, setQueuePosition] = useState(0);
   const chessRef = useRef<Chess | null>(null);
+  const colorRef = useRef(color);
+  const matchIdRef = useRef(matchId);
+
+  useEffect(() => {
+    colorRef.current = color;
+  }, [color]);
+
+  useEffect(() => {
+    matchIdRef.current = matchId;
+  }, [matchId]);
 
   useEffect(() => {
     import("chess.js").then(({ Chess }) => {
@@ -37,20 +55,25 @@ export default function Play() {
 
   useEffect(() => {
     let cancelled = false;
+    if (isSpectatingRoute) {
+      setGameState("idle");
+      return () => {
+        cancelled = true;
+      };
+    }
     if (connected && walletAddress) {
-      setGameState("checking");
-      checkEligibility().then((eligible) => {
+      setGameState("idle");
+      checkEligibility().then(() => {
         if (cancelled) return;
-        setGameState(eligible ? "idle" : "ineligible");
       });
     }
     return () => {
       cancelled = true;
     };
-  }, [connected, walletAddress, checkEligibility]);
+  }, [connected, walletAddress, checkEligibility, isSpectatingRoute]);
 
   useEffect(() => {
-    if (!walletAddress) return;
+    if (!walletAddress && !isSpectatingRoute) return;
 
     const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
       SOCKET_URL,
@@ -58,7 +81,12 @@ export default function Play() {
     );
 
     newSocket.on("connect", () => {
-      newSocket.emit("wallet:connect", { walletAddress });
+      if (walletAddress) {
+        newSocket.emit("wallet:connect", { walletAddress });
+      }
+      if (isSpectatingRoute && spectateMatchId) {
+        newSocket.emit("spectate:join", { matchId: spectateMatchId });
+      }
     });
 
     newSocket.on("queue:joined", ({ position }) => {
@@ -70,21 +98,28 @@ export default function Play() {
       setMatchId(mid);
       setOpponent(opp);
       setColor(c as "white" | "black");
+      setSpectatorCount(0);
       setGameState("matched");
     });
 
-    newSocket.on("match:start", ({ fen: startFen }) => {
+    newSocket.on("match:start", ({ fen: startFen, white, black, whiteTime: wt, blackTime: bt }) => {
       setFen(startFen);
       if (chessRef.current) {
         chessRef.current.load(startFen);
       }
+      setWhitePlayer(white);
+      setBlackPlayer(black);
+      setWhiteTime(wt);
+      setBlackTime(bt);
       setMoveHistory([]);
       setResult(null);
       setGameState("playing");
     });
 
-    newSocket.on("match:move_applied", ({ san, fen: newFen }) => {
+    newSocket.on("match:move_applied", ({ san, fen: newFen, whiteTime: wt, blackTime: bt }) => {
       setFen(newFen);
+      setWhiteTime(wt);
+      setBlackTime(bt);
       setMoveHistory((prev) => [...prev, san]);
       if (chessRef.current) {
         chessRef.current.load(newFen);
@@ -104,8 +139,40 @@ export default function Play() {
 
     newSocket.on("match:ended", ({ result: r, whiteRatingChange, blackRatingChange }) => {
       setResult(r);
-      const isWhite = color === "white";
-      setRatingChange(isWhite ? whiteRatingChange : blackRatingChange);
+      const isWhite = colorRef.current === "white";
+      setRatingChange(isSpectatingRoute ? 0 : isWhite ? whiteRatingChange : blackRatingChange);
+      setGameState("ended");
+    });
+
+    newSocket.on("match:spectator_count", ({ matchId: mid, viewers }) => {
+      if (matchIdRef.current === mid || (isSpectatingRoute && spectateMatchId === mid)) {
+        setSpectatorCount(viewers);
+      }
+    });
+
+    newSocket.on("spectate:started", (liveMatch) => {
+      setMatchId(liveMatch.matchId);
+      setWhitePlayer(liveMatch.whiteWallet);
+      setBlackPlayer(liveMatch.blackWallet);
+      setOpponent(liveMatch.blackWallet);
+      setColor("white");
+      setFen(liveMatch.fen);
+      setWhiteTime(liveMatch.whiteTime);
+      setBlackTime(liveMatch.blackTime);
+      setMoveHistory(liveMatch.moveHistory);
+      setSpectatorCount(liveMatch.viewers);
+      setSelectedSquare(null);
+      setLegalMoves([]);
+      setResult(null);
+      if (chessRef.current) {
+        chessRef.current.load(liveMatch.fen);
+      }
+      setGameState("spectating");
+    });
+
+    newSocket.on("spectate:error", ({ message }) => {
+      setResult(message);
+      setRatingChange(0);
       setGameState("ended");
     });
 
@@ -116,10 +183,13 @@ export default function Play() {
     setSocket(newSocket);
 
     return () => {
+      if (isSpectatingRoute && spectateMatchId) {
+        newSocket.emit("spectate:leave", { matchId: spectateMatchId });
+      }
       setSocket(null);
       newSocket.close();
     };
-  }, [walletAddress, color]);
+  }, [walletAddress, isSpectatingRoute, spectateMatchId]);
 
   const joinQueue = useCallback(() => {
     if (!socket || !walletAddress) return;
@@ -197,14 +267,31 @@ export default function Play() {
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  if (!connected) {
+  const shortWallet = (value?: string | null, length = 8) => {
+    if (!value) return "Waiting";
+    return `${value.slice(0, length)}...${value.slice(-4)}`;
+  };
+
+  const isSpectating = gameState === "spectating";
+  const isLiveBoard = gameState === "playing" || isSpectating;
+  const boardOrientation = isSpectating ? "white" : color;
+  const topClock = boardOrientation === "white" ? blackTime : whiteTime;
+  const bottomClock = boardOrientation === "white" ? whiteTime : blackTime;
+  const topLabel = isSpectating
+    ? `Black ${shortWallet(blackPlayer)}`
+    : shortWallet(opponent);
+  const bottomLabel = isSpectating
+    ? `White ${shortWallet(whitePlayer)}`
+    : `You (${color})`;
+
+  if (!connected && !isSpectatingRoute) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
         <div className="text-center">
           <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-4">Connect Your Wallet</h1>
           <p className="text-[#8A8F98] mb-8 max-w-md">
-            Connect your Solana wallet to check token eligibility and enter the ranked arena.
+            Connect your Solana wallet to enter the ranked arena.
           </p>
           <button
             onClick={connect}
@@ -222,7 +309,7 @@ export default function Play() {
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#8A8F98]">Checking token eligibility...</p>
+          <p className="text-[#8A8F98]">Connecting wallet...</p>
         </div>
       </div>
     );
@@ -232,10 +319,10 @@ export default function Play() {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
         <div className="text-center max-w-md mx-auto">
-          <Shield className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h1 className="text-3xl font-bold mb-4">Not Eligible</h1>
+          <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
+          <h1 className="text-3xl font-bold mb-4">Arena Open</h1>
           <p className="text-[#8A8F98] mb-4">
-            You need at least {GAME_CONFIG.requiredTokenBalance.toLocaleString()} $CM tokens to enter the arena.
+            Token gating is disabled while we test the play cycle.
           </p>
           <button
             onClick={checkEligibility}
@@ -260,21 +347,25 @@ export default function Play() {
                   <Swords className="w-5 h-5 text-[#14F195]" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">You</p>
+                  <p className="text-sm font-medium">{isSpectating ? "Spectator" : "You"}</p>
                   <p className="text-xs text-[#8A8F98] font-mono">
-                    {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+                    {walletAddress ? shortWallet(walletAddress, 6) : "Read-only view"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#8A8F98]">
                 <Shield className="w-3.5 h-3.5 text-[#14F195]" />
-                <span>Eligible</span>
+                <span>{isSpectating ? "Watching live" : "Wallet connected"}</span>
               </div>
             </div>
 
             <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
               <h3 className="text-sm font-medium mb-3">Status</h3>
-              {gameState === "idle" && <p className="text-xs text-[#8A8F98]">Ready to queue</p>}
+              {gameState === "idle" && (
+                <p className="text-xs text-[#8A8F98]">
+                  {isSpectatingRoute ? "Joining spectator feed..." : "Ready to queue"}
+                </p>
+              )}
               {gameState === "queue" && (
                 <div>
                   <p className="text-xs text-[#14F195] animate-pulse">In queue...</p>
@@ -283,6 +374,7 @@ export default function Play() {
               )}
               {gameState === "matched" && <p className="text-xs text-[#14F195]">Match found!</p>}
               {gameState === "playing" && <p className="text-xs text-[#14F195]">Game in progress</p>}
+              {gameState === "spectating" && <p className="text-xs text-[#14F195]">Spectating live match</p>}
               {gameState === "ended" && result && (
                 <div>
                   <p className="text-xs text-[#8A8F98]">Game ended: {result}</p>
@@ -293,9 +385,15 @@ export default function Play() {
                   )}
                 </div>
               )}
+              {(gameState === "matched" || isLiveBoard) && (
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
+                  <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                  <span>{spectatorCount} watching</span>
+                </div>
+              )}
             </div>
 
-            {gameState === "idle" && (
+            {gameState === "idle" && !isSpectatingRoute && (
               <button
                 onClick={joinQueue}
                 className="w-full py-3 bg-[#14F195] text-black font-semibold rounded-xl hover:bg-[#14F195]/90 transition-all flex items-center justify-center gap-2"
@@ -322,7 +420,7 @@ export default function Play() {
                 Resign
               </button>
             )}
-            {gameState === "ended" && (
+            {gameState === "ended" && !isSpectatingRoute && (
               <button
                 onClick={() => {
                   setGameState("idle");
@@ -342,18 +440,24 @@ export default function Play() {
 
           {/* Center — Chess Board */}
           <div className="flex flex-col items-center">
-            {gameState === "playing" && (
+            {isLiveBoard && (
               <div className="w-full max-w-[520px] flex justify-between items-center mb-2 px-1">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs">
-                    {color === "white" ? "B" : "W"}
+                    {boardOrientation === "white" ? "B" : "W"}
                   </div>
-                  <span className="text-xs text-[#8A8F98] font-mono">{opponent?.slice(0, 8)}...</span>
+                  <span className="text-xs text-[#8A8F98] font-mono">{topLabel}</span>
                 </div>
-                <div className={`text-xl font-mono font-bold px-3 py-1 rounded-lg ${
-                  (color === "white" ? blackTime : whiteTime) < 30000 ? "bg-red-500/20 text-red-400" : "bg-white/5"
-                }`}>
-                  {formatTime(color === "white" ? blackTime : whiteTime)}
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
+                    <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                    {spectatorCount}
+                  </div>
+                  <div className={`text-xl font-mono font-bold px-3 py-1 rounded-lg ${
+                    topClock < 30000 ? "bg-red-500/20 text-red-400" : "bg-white/5"
+                  }`}>
+                    {formatTime(topClock)}
+                  </div>
                 </div>
               </div>
             )}
@@ -361,24 +465,24 @@ export default function Play() {
             <div className="w-full max-w-[520px] aspect-square rounded-xl overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50">
               <Board3D
                 fen={fen}
-                orientation={color}
+                orientation={boardOrientation}
                 onSquareClick={handleSquareClick}
                 selectedSquare={selectedSquare}
                 legalMoves={legalMoves}
               />
             </div>
 
-            {gameState === "playing" && (
+            {isLiveBoard && (
               <div className="w-full max-w-[520px] flex justify-between items-center mt-2 px-1">
                 <div className={`text-xl font-mono font-bold px-3 py-1 rounded-lg ${
-                  (color === "white" ? whiteTime : blackTime) < 30000 ? "bg-red-500/20 text-red-400" : "bg-white/5"
+                  bottomClock < 30000 ? "bg-red-500/20 text-red-400" : "bg-white/5"
                 }`}>
-                  {formatTime(color === "white" ? whiteTime : blackTime)}
+                  {formatTime(bottomClock)}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[#8A8F98] font-mono">You ({color})</span>
+                  <span className="text-xs text-[#8A8F98] font-mono">{bottomLabel}</span>
                   <div className="w-6 h-6 rounded-full bg-[#14F195]/20 flex items-center justify-center text-xs text-[#14F195]">
-                    {color === "white" ? "W" : "B"}
+                    {boardOrientation === "white" ? "W" : "B"}
                   </div>
                 </div>
               </div>
@@ -398,15 +502,19 @@ export default function Play() {
 
           {/* Right Panel */}
           <div className="space-y-4">
-            {opponent && (
+            {(opponent || isSpectating) && (
               <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
                     <Swords className="w-5 h-5 text-[#8A8F98]" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">Opponent</p>
-                    <p className="text-xs text-[#8A8F98] font-mono">{opponent?.slice(0, 12)}...</p>
+                    <p className="text-sm font-medium">{isSpectating ? "Live Match" : "Opponent"}</p>
+                    <p className="text-xs text-[#8A8F98] font-mono">
+                      {isSpectating
+                        ? `${shortWallet(whitePlayer, 6)} vs ${shortWallet(blackPlayer, 6)}`
+                        : shortWallet(opponent, 12)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -442,6 +550,13 @@ export default function Play() {
                 <div className="flex justify-between">
                   <span>Bucket</span>
                   <span className="text-[#14F195]">{getRatingBucket(1000)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Viewers</span>
+                  <span className="inline-flex items-center gap-1 text-white">
+                    <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                    {spectatorCount}
+                  </span>
                 </div>
               </div>
             </div>

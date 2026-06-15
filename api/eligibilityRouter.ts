@@ -4,27 +4,12 @@ import { findOrCreateUser } from "./queries/users";
 import { saveTokenSnapshot, getLatestTokenSnapshot } from "./queries/rewards";
 import { GAME_CONFIG } from "../src/config/game";
 
-// Mock token balance check — in production this queries Solana RPC
-async function checkTokenBalanceMock(walletAddress: string): Promise<number> {
-  // For demo: wallets starting with "Elite" have tokens
-  const hasTokens = walletAddress.length > 30;
-  if (hasTokens) {
-    // Deterministic "random" based on wallet address
-    let hash = 0;
-    for (let i = 0; i < walletAddress.length; i++) {
-      hash = ((hash << 5) - hash + walletAddress.charCodeAt(i)) | 0;
-    }
-    return Math.abs(hash) % 500000 + 50000;
-  }
-  return 0;
-}
-
 export const eligibilityRouter = createRouter({
   check: publicQuery
     .input(z.object({ walletAddress: z.string().min(32).max(44) }))
     .mutation(async ({ input }) => {
-      const balance = await checkTokenBalanceMock(input.walletAddress);
-      const isEligible = balance >= GAME_CONFIG.requiredTokenBalance;
+      const balance = 0;
+      const isEligible = true;
 
       await saveTokenSnapshot({
         walletAddress: input.walletAddress,
@@ -33,7 +18,6 @@ export const eligibilityRouter = createRouter({
         isEligible,
       });
 
-      // Ensure user record exists
       await findOrCreateUser(input.walletAddress);
 
       return {
@@ -54,7 +38,7 @@ export const eligibilityRouter = createRouter({
         return {
           walletAddress: input.walletAddress,
           tokenBalance: 0,
-          isEligible: false,
+          isEligible: true,
           lastChecked: null,
         };
       }
@@ -62,7 +46,7 @@ export const eligibilityRouter = createRouter({
       return {
         walletAddress: latest.walletAddress,
         tokenBalance: Number(latest.tokenBalance),
-        isEligible: latest.isEligible,
+        isEligible: true,
         lastChecked: latest.checkedAt,
       };
     }),

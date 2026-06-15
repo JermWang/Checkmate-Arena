@@ -83,6 +83,17 @@ export interface AntiCheatFlag {
   createdAt: Date;
 }
 
+export interface LiveMatchSummary {
+  matchId: number;
+  whiteWallet: string;
+  blackWallet: string;
+  fen: string;
+  moveCount: number;
+  whiteTime: number;
+  blackTime: number;
+  viewers: number;
+}
+
 // Socket.IO event types
 export interface ServerToClientEvents {
   "eligibility:updated": (data: TokenEligibility) => void;
@@ -96,6 +107,10 @@ export interface ServerToClientEvents {
   "match:ended": (data: { result: string; winner: string | null; whiteRatingChange: number; blackRatingChange: number }) => void;
   "match:opponent_disconnected": (data: { remainingSeconds: number }) => void;
   "match:opponent_reconnected": () => void;
+  "match:spectator_count": (data: { matchId: number; viewers: number }) => void;
+  "spectate:list": (data: { matches: LiveMatchSummary[] }) => void;
+  "spectate:started": (data: LiveMatchSummary & { moveHistory: string[] }) => void;
+  "spectate:error": (data: { message: string }) => void;
   "leaderboard:updated": () => void;
 }
 
@@ -107,4 +122,7 @@ export interface ClientToServerEvents {
   "match:resign": (data: { matchId: number }) => void;
   "match:draw_offer": (data: { matchId: number }) => void;
   "match:draw_accept": (data: { matchId: number }) => void;
+  "spectate:list": () => void;
+  "spectate:join": (data: { matchId: number }) => void;
+  "spectate:leave": (data: { matchId: number }) => void;
 }

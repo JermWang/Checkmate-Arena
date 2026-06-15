@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { Link } from "react-router";
-import { Coins, Filter, Plus, Lock, FlaskConical, Shield } from "lucide-react";
+import { Coins, Filter, Plus, Lock, FlaskConical, Shield, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateWagerDialog } from "@/components/wager/CreateWagerDialog";
 import { IS_PLACEHOLDER } from "@/config/wager";
+import { io, type Socket } from "socket.io-client";
+import type { ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../../contracts/types";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
+  import.meta.env.DEV ? "http://localhost:3001" : window.location.origin
+);
 
 type Color = "white" | "black" | "random";
 interface Challenge {
@@ -34,11 +40,44 @@ const STAKE_BANDS = [
   { label: "10k+",    min: 10000, max: Infinity },
 ];
 
+function shortWallet(value: string, length = 6) {
+  return `${value.slice(0, length)}...${value.slice(-4)}`;
+}
+
 export default function Lobby() {
   const { connected, connect } = useWallet();
   const [tc, setTc] = useState("Any");
   const [band, setBand] = useState(STAKE_BANDS[0]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [liveMatches, setLiveMatches] = useState<LiveMatchSummary[]>([]);
+
+  useEffect(() => {
+    const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
+      SOCKET_URL,
+      { path: "/socket.io" }
+    );
+
+    const requestMatches = () => {
+      socket.emit("spectate:list");
+    };
+
+    socket.on("connect", requestMatches);
+    socket.on("spectate:list", ({ matches }) => {
+      setLiveMatches(matches);
+    });
+    socket.on("match:spectator_count", ({ matchId, viewers }) => {
+      setLiveMatches((matches) =>
+        matches.map((match) => (match.matchId === matchId ? { ...match, viewers } : match))
+      );
+    });
+
+    const interval = window.setInterval(requestMatches, 4000);
+
+    return () => {
+      window.clearInterval(interval);
+      socket.close();
+    };
+  }, []);
 
   const filtered = SEED.filter(
     (c) =>
@@ -103,6 +142,50 @@ export default function Lobby() {
             </Button>
           </div>
         </div>
+
+        <section className="mb-6 rounded-xl border border-white/5 bg-white/[0.02]">
+          <div className="flex items-center justify-between border-b border-white/5 px-4 py-3">
+            <div>
+              <h2 className="text-sm font-medium">Live matches</h2>
+              <p className="text-xs text-[#8A8F98]">Spectate active boards and live viewer counts.</p>
+            </div>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-xs text-[#8A8F98]">
+              <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+              {liveMatches.length}
+            </div>
+          </div>
+          <div className="divide-y divide-white/5">
+            {liveMatches.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-[#8A8F98]">No live matches yet.</div>
+            ) : (
+              liveMatches.map((match) => (
+                <div
+                  key={match.matchId}
+                  className="grid gap-3 px-4 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-sm text-white">
+                      {shortWallet(match.whiteWallet)} vs {shortWallet(match.blackWallet)}
+                    </p>
+                    <p className="mt-1 text-xs text-[#8A8F98]">
+                      Match #{match.matchId} · {match.moveCount} moves
+                    </p>
+                  </div>
+                  <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
+                    <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                    {match.viewers} watching
+                  </div>
+                  <Link
+                    to={`/play?spectate=${match.matchId}`}
+                    className="inline-flex w-fit items-center justify-center rounded-full bg-[#14F195] px-4 py-2 text-xs font-semibold text-black transition-all hover:bg-[#14F195]/90"
+                  >
+                    Spectate
+                  </Link>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2 mb-4">

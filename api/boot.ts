@@ -21,7 +21,7 @@ app.get("/api/health", (c) => c.json({ ok: true, ts: Date.now() }));
 // Game config
 app.get("/api/config", (c) =>
   c.json({
-    requiredTokenBalance: 100000,
+    requiredTokenBalance: 0,
     timeControlSeconds: 300,
     epochLengthHours: 24,
   })

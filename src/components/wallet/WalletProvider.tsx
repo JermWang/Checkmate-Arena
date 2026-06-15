@@ -1,4 +1,8 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
+import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
+import type { Adapter, WalletError } from "@solana/wallet-adapter-base";
+import { clusterApiUrl } from "@solana/web3.js";
 
 interface WalletContextType {
   walletAddress: string | null;
@@ -13,48 +17,61 @@ interface WalletContextType {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
+const SOLANA_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_URL || clusterApiUrl("mainnet-beta");
+
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const endpoint = useMemo(() => SOLANA_ENDPOINT, []);
+  const wallets = useMemo<Adapter[]>(() => [], []);
+
+  const handleWalletError = useCallback((error: WalletError) => {
+    console.error("Solana wallet error:", error);
+  }, []);
+
+  return (
+    <ConnectionProvider endpoint={endpoint}>
+      <SolanaWalletProvider wallets={wallets} autoConnect onError={handleWalletError}>
+        <WalletModalProvider>
+          <WalletStateProvider>{children}</WalletStateProvider>
+        </WalletModalProvider>
+      </SolanaWalletProvider>
+    </ConnectionProvider>
+  );
+}
+
+function WalletStateProvider({ children }: { children: ReactNode }) {
+  const {
+    publicKey,
+    connected,
+    connecting,
+    wallet,
+    connect: connectSelectedWallet,
+    disconnect: disconnectSelectedWallet,
+  } = useSolanaWallet();
+  const { setVisible } = useWalletModal();
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
   const [tokenBalance, setTokenBalance] = useState(0);
 
-  // Auto-restore from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("checkmate_wallet");
-    if (saved) {
-      setWalletAddress(saved);
-      setConnected(true);
-    }
-  }, []);
+  const walletAddress = publicKey?.toBase58() ?? null;
 
   const connect = useCallback(async () => {
-    setConnecting(true);
-    try {
-      // Mock wallet connection — in production uses Solana Wallet Adapter
-      await new Promise((r) => setTimeout(r, 800));
-      const mockAddress = "CM" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      setWalletAddress(mockAddress);
-      setConnected(true);
-      localStorage.setItem("checkmate_wallet", mockAddress);
-
-      // Check eligibility
-      await checkEligibilityForAddress(mockAddress);
-    } finally {
-      setConnecting(false);
+    if (!wallet) {
+      setVisible(true);
+      return;
     }
-  }, []);
+
+    try {
+      await connectSelectedWallet();
+    } catch (error) {
+      console.error("Unable to connect selected Solana wallet:", error);
+      setVisible(true);
+    }
+  }, [connectSelectedWallet, setVisible, wallet]);
 
   const disconnect = useCallback(() => {
-    setWalletAddress(null);
-    setConnected(false);
-    setIsEligible(null);
-    setTokenBalance(0);
-    localStorage.removeItem("checkmate_wallet");
-  }, []);
+    void disconnectSelectedWallet();
+  }, [disconnectSelectedWallet]);
 
-  const checkEligibilityForAddress = async (address: string): Promise<boolean | null> => {
+  const checkEligibilityForAddress = useCallback(async (address: string): Promise<boolean> => {
     try {
       const res = await fetch("/api/trpc/eligibility.check", {
         method: "POST",
@@ -62,25 +79,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ json: { walletAddress: address } }),
       });
       const data = await res.json();
-      if (data.result?.data) {
-        setIsEligible(data.result.data.isEligible);
-        setTokenBalance(data.result.data.tokenBalance);
-        return data.result.data.isEligible;
+      const result = data.result?.data;
+      if (result) {
+        setTokenBalance(result.tokenBalance);
       }
-      setIsEligible(false);
-      return false;
-    } catch {
-      setIsEligible(false);
-      return false;
+    } catch (error) {
+      console.warn("Eligibility sync failed; token gate is currently disabled.", error);
     }
-  };
+
+    setIsEligible(true);
+    return true;
+  }, []);
 
   const checkEligibility = useCallback(async () => {
-    if (walletAddress) {
-      return checkEligibilityForAddress(walletAddress);
+    if (!walletAddress) return null;
+    return checkEligibilityForAddress(walletAddress);
+  }, [checkEligibilityForAddress, walletAddress]);
+
+  useEffect(() => {
+    if (!walletAddress) {
+      setIsEligible(null);
+      setTokenBalance(0);
+      return;
     }
-    return null;
-  }, [walletAddress]);
+
+    setIsEligible(true);
+    void checkEligibilityForAddress(walletAddress);
+  }, [checkEligibilityForAddress, walletAddress]);
 
   return (
     <WalletContext.Provider

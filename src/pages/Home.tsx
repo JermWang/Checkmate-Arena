@@ -16,8 +16,8 @@ import { Hero3D } from "@/components/three/Hero3D";
 const steps = [
   {
     number: "01",
-    title: "Hold Tokens",
-    description: "Hold 100,000+ $CM tokens in your Solana wallet to gain arena access.",
+    title: "Connect Wallet",
+    description: "Connect a real Solana wallet to enter the arena.",
     icon: <Shield className="size-5 text-[#14F195]" />,
   },
   {
@@ -52,7 +52,7 @@ const rewards = [
 ];
 
 export default function Home() {
-  const { connected, connect, isEligible } = useWallet();
+  const { connected, connect } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -88,19 +88,19 @@ export default function Home() {
 
           <div className="order-2 mx-auto max-w-[720px] text-center lg:order-1 lg:mx-0 lg:text-left">
             <p className="mb-3 text-[11px] uppercase tracking-[0.28em] text-[#8A8F98]">
-              Token-gated ranked chess on Solana
+              Ranked chess on Solana
             </p>
             <h1 className="text-4xl font-bold leading-[0.96] tracking-normal sm:text-5xl md:text-6xl lg:text-7xl">
               Enter the
               <span className="block text-[#14F195]">King of Games</span>
             </h1>
             <p className="mx-auto mt-5 max-w-[560px] text-base leading-7 text-[#A6ABB4] sm:text-lg lg:mx-0">
-              Hold 100,000+ tokens to enter ranked matchmaking, chase the daily leaderboard,
+              Connect your wallet to enter ranked matchmaking, chase the daily leaderboard,
               or opt into escrow-backed $CHESS wagers.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              {connected && isEligible ? (
+              {connected ? (
                 <Link
                   to="/play"
                   className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
@@ -139,7 +139,7 @@ export default function Home() {
           <SectionHeader
             eyebrow="Arena loop"
             title="How It Works"
-            description="A compact path from wallet eligibility to ranked play and rewards."
+            description="A compact path from wallet connection to ranked play and rewards."
           />
           <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step) => (
@@ -264,7 +264,7 @@ export default function Home() {
             </span>
           </div>
           <p className="text-xs text-[#8A8F98]">
-            Token-gated ranked chess. Ranked is free; wagering is opt-in.
+            Ranked chess on Solana. Ranked is free; wagering is opt-in.
           </p>
         </div>
       </footer>

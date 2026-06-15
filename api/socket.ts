@@ -1,5 +1,5 @@
 import type { Server as HTTPServer } from "http";
-import { Server as SocketIOServer } from "socket.io";
+import { Server as SocketIOServer, type Socket } from "socket.io";
 import { Chess } from "chess.js";
 import {
   createMatch,
@@ -18,7 +18,7 @@ import {
 import { updateLeaderboardScore, getCurrentEpoch } from "./queries/leaderboard";
 import { createAdminFlag } from "./queries/admin";
 import { GAME_CONFIG, getKFactor, getRatingBucket } from "../src/config/game";
-import type { ClientToServerEvents, ServerToClientEvents } from "../contracts/types";
+import type { ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../contracts/types";
 
 // ============================================================
 // In-memory matchmaking and game state
@@ -52,8 +52,57 @@ const activeGames = new Map<number, ActiveGame>();
 const walletToSocket = new Map<string, string>();
 const socketToWallet = new Map<string, string>();
 const socketToMatch = new Map<string, number>();
+const spectatorsByMatch = new Map<number, Set<string>>();
+const socketToSpectatedMatch = new Map<string, number>();
 
 let io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
+
+function spectatorRoom(matchId: number) {
+  return `spectators:${matchId}`;
+}
+
+function spectatorCount(matchId: number) {
+  return spectatorsByMatch.get(matchId)?.size ?? 0;
+}
+
+function getLiveMatchSummary(game: ActiveGame): LiveMatchSummary {
+  return {
+    matchId: game.matchId,
+    whiteWallet: game.whiteWallet,
+    blackWallet: game.blackWallet,
+    fen: game.chess.fen(),
+    moveCount: game.moveCount,
+    whiteTime: game.whiteTime,
+    blackTime: game.blackTime,
+    viewers: spectatorCount(game.matchId),
+  };
+}
+
+function emitSpectatorCount(matchId: number) {
+  const game = activeGames.get(matchId);
+  if (!game) return;
+
+  const data = { matchId, viewers: spectatorCount(matchId) };
+  io.to(game.whiteSocket).to(game.blackSocket).to(spectatorRoom(matchId)).emit("match:spectator_count", data);
+}
+
+function leaveSpectatedMatch(
+  socket: Socket<ClientToServerEvents, ServerToClientEvents>,
+  requestedMatchId?: number
+) {
+  const matchId = socketToSpectatedMatch.get(socket.id);
+  if (!matchId || (requestedMatchId && requestedMatchId !== matchId)) return;
+
+  const spectators = spectatorsByMatch.get(matchId);
+  spectators?.delete(socket.id);
+  if (spectators?.size === 0) {
+    spectatorsByMatch.delete(matchId);
+  }
+
+  socketToSpectatedMatch.delete(socket.id);
+  socket.leave(spectatorRoom(matchId));
+  emitSpectatorCount(matchId);
+}
 
 // ============================================================
 // ELO Rating Calculation
@@ -249,7 +298,7 @@ function startGameTimer(matchId: number) {
 
     g.lastMoveTime = now;
 
-    io.to(g.whiteSocket).to(g.blackSocket).emit("match:timer_update", {
+    io.to(g.whiteSocket).to(g.blackSocket).to(spectatorRoom(matchId)).emit("match:timer_update", {
       whiteTime: g.whiteTime,
       blackTime: g.blackTime,
     });
@@ -339,7 +388,7 @@ async function endMatch(
   });
 
   // Emit result
-  io.to(game.whiteSocket).to(game.blackSocket).emit("match:ended", {
+  io.to(game.whiteSocket).to(game.blackSocket).to(spectatorRoom(matchId)).emit("match:ended", {
     result: resultType,
     winner: winnerWallet,
     whiteRatingChange: whiteDelta,
@@ -347,6 +396,13 @@ async function endMatch(
   });
 
   // Cleanup
+  const spectators = spectatorsByMatch.get(matchId);
+  if (spectators) {
+    for (const socketId of spectators) {
+      socketToSpectatedMatch.delete(socketId);
+    }
+    spectatorsByMatch.delete(matchId);
+  }
   socketToMatch.delete(game.whiteSocket);
   socketToMatch.delete(game.blackSocket);
   activeGames.delete(matchId);
@@ -432,6 +488,42 @@ export function setupSocketIO(httpServer: HTTPServer) {
       socket.emit("queue:left");
     });
 
+    socket.on("spectate:list", () => {
+      socket.emit("spectate:list", {
+        matches: Array.from(activeGames.values()).map(getLiveMatchSummary),
+      });
+    });
+
+    socket.on("spectate:join", ({ matchId }) => {
+      const game = activeGames.get(matchId);
+      if (!game) {
+        socket.emit("spectate:error", { message: "That match is no longer live." });
+        return;
+      }
+
+      leaveSpectatedMatch(socket);
+
+      let spectators = spectatorsByMatch.get(matchId);
+      if (!spectators) {
+        spectators = new Set();
+        spectatorsByMatch.set(matchId, spectators);
+      }
+
+      spectators.add(socket.id);
+      socketToSpectatedMatch.set(socket.id, matchId);
+      socket.join(spectatorRoom(matchId));
+
+      socket.emit("spectate:started", {
+        ...getLiveMatchSummary(game),
+        moveHistory: game.chess.history(),
+      });
+      emitSpectatorCount(matchId);
+    });
+
+    socket.on("spectate:leave", ({ matchId }) => {
+      leaveSpectatedMatch(socket, matchId);
+    });
+
     // Make a move
     socket.on("match:move", async ({ matchId, from, to, promotion }) => {
       const game = activeGames.get(matchId);
@@ -484,7 +576,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
         game.currentTurn = game.chess.turn();
 
         // Broadcast move
-        io.to(game.whiteSocket).to(game.blackSocket).emit("match:move_applied", {
+        io.to(game.whiteSocket).to(game.blackSocket).to(spectatorRoom(matchId)).emit("match:move_applied", {
           san: move.san,
           fen: game.chess.fen(),
           moveNumber: game.moveCount,
@@ -525,6 +617,8 @@ export function setupSocketIO(httpServer: HTTPServer) {
     socket.on("disconnect", () => {
       const wallet = socketToWallet.get(socket.id);
       const matchId = socketToMatch.get(socket.id);
+
+      leaveSpectatedMatch(socket);
 
       // Remove from queue
       if (wallet) {

@@ -4,7 +4,7 @@
 
 export const GAME_CONFIG = {
   // Token gating
-  requiredTokenBalance: 100_000,
+  requiredTokenBalance: 0,
   tokenMint: "CM Token", // Placeholder — set via env in production
   tokenDecimals: 6,
 
