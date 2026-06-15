@@ -5,10 +5,9 @@
 /**
  * $CHESS SPL mint.
  *
- * Pre-launch: read from VITE_CHESS_MINT, defaults to a devnet placeholder.
- * Launch day: set VITE_CHESS_MINT to the real mint and VITE_CHESS_LAUNCHED=true,
- * redeploy. The Anchor escrow program checks the mint on every instruction so
- * no contract change is needed.
+ * Read from VITE_CHESS_MINT, falling back to a dev placeholder only when the
+ * env var is absent. The Anchor escrow program checks the mint on every
+ * instruction so no contract change is needed when the mint is configured.
  */
 export const CHESS_MINT =
   import.meta.env.VITE_CHESS_MINT ||
