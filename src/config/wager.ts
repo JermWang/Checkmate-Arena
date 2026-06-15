@@ -14,8 +14,7 @@ export const CHESS_MINT =
   import.meta.env.VITE_CHESS_MINT ||
   "ChESSpLAcEHoLdErMiNTpUbKey1111111111111111";
 
-export const IS_PLACEHOLDER =
-  import.meta.env.VITE_CHESS_LAUNCHED !== "true";
+export const IS_PLACEHOLDER = !import.meta.env.VITE_CHESS_MINT;
 
 export const CHESS_DECIMALS = 6;
 

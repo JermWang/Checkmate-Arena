@@ -98,7 +98,7 @@ export default function Home() {
               style={{ transform: `translateY(${Math.min(scrollY * 0.035, 18)}px)` }}
             >
               <div className="absolute -inset-8 rounded-full bg-[#14F195]/[0.18] blur-[72px]" />
-              <div className="absolute inset-10 rounded-full bg-[#7c4dff]/[0.14] blur-[54px]" />
+              <div className="absolute inset-10 rounded-full bg-[#7c4dff]/[0.22] blur-[58px]" />
               <Hero3D
                 pieceKey="wN"
                 png="/hero-knight.png"
@@ -173,7 +173,6 @@ export default function Home() {
           label="Position"
           title="Every move has weight."
           copy="The board stays fast and readable while the backend records the match, validates moves, and updates ratings."
-          word="KING"
           pieceKey="wK"
           png="/king-piece.png"
           alt="King Piece"
@@ -185,7 +184,6 @@ export default function Home() {
           label="Leverage"
           title="Skill is your edge."
           copy="Play ranked for free, then step into public challenges or private rooms when you want stakes on the board."
-          word="QUEEN"
           pieceKey="wQ"
           png="/queen-piece.png"
           alt="Queen Piece"
@@ -348,7 +346,6 @@ function PieceFeature({
   label,
   title,
   copy,
-  word,
   pieceKey,
   png,
   alt,
@@ -358,7 +355,6 @@ function PieceFeature({
   label: string;
   title: string;
   copy: string;
-  word: string;
   pieceKey: string;
   png: string;
   alt: string;
@@ -378,6 +374,7 @@ function PieceFeature({
   const piece = (
     <div className="relative mx-auto aspect-[4/5] w-full max-w-[280px] sm:max-w-[330px] lg:max-w-[390px]">
       <div className="absolute inset-10 rounded-full bg-[#14F195]/10 blur-3xl" />
+      <div className="absolute inset-x-4 top-8 bottom-12 rounded-full bg-[#7c4dff]/[0.12] blur-[58px]" />
       <div
         className="relative size-full"
         style={{ transform: `translateY(${-Math.min(offset * 0.012, 18)}px)` }}
@@ -389,9 +386,6 @@ function PieceFeature({
         pieceHeight={pieceKey.endsWith("Q") ? 2.3 : 2.55}
         className="size-full drop-shadow-[0_24px_70px_rgba(20,241,149,0.16)]"
       />
-      </div>
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 -translate-y-1/2 text-center text-7xl font-bold leading-none tracking-normal text-white/[0.045] sm:text-8xl md:text-9xl">
-        {word}
       </div>
     </div>
   );

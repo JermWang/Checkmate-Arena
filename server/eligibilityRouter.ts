@@ -3,6 +3,7 @@ import { createRouter, publicQuery } from "./middleware";
 import { findOrCreateUser } from "./queries/users";
 import { saveTokenSnapshot, getLatestTokenSnapshot } from "./queries/rewards";
 import { GAME_CONFIG } from "../src/config/game";
+import { env } from "./lib/env";
 
 export const eligibilityRouter = createRouter({
   check: publicQuery
@@ -13,7 +14,7 @@ export const eligibilityRouter = createRouter({
 
       await saveTokenSnapshot({
         walletAddress: input.walletAddress,
-        tokenMint: GAME_CONFIG.tokenMint,
+        tokenMint: env.chessMint || GAME_CONFIG.tokenMint,
         tokenBalance: balance.toString(),
         isEligible,
       });

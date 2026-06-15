@@ -30,7 +30,7 @@ export default function LobbyPrivate() {
           <Lock className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-3">Private rooms need a wallet</h1>
           <p className="text-[#8A8F98] mb-6">
-            Connect to create or join a private wagered match.
+            Connect to create or join a private $CHESS wager. No minimum token balance is required.
           </p>
           <Button
             onClick={connect}
@@ -60,7 +60,7 @@ export default function LobbyPrivate() {
           </h1>
         </div>
         <p className="text-sm text-[#8A8F98] mb-8">
-          Create a 6-character code and share it. Friends, streamers, brackets — single-use, 15-min TTL.
+          Create a 6-character code and share it. Rooms use $CHESS stakes only and do not require a holding minimum.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,7 +69,7 @@ export default function LobbyPrivate() {
             <Plus className="w-5 h-5 text-[#14F195] mb-3" />
             <h2 className="text-lg font-semibold">Create a room</h2>
             <p className="text-sm text-[#8A8F98] mt-1 mb-5">
-              Set stake & terms, get a code to share.
+              Set the $CHESS stake and match terms, then get a code to share.
             </p>
             <Button
               onClick={() => setCreateOpen(true)}

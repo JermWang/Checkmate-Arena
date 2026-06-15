@@ -19,6 +19,7 @@ import {
   type ColorPref,
   payoutFromStake,
   generateRoomCode,
+  CHESS_MINT,
 } from "@/config/wager";
 
 interface Props {
@@ -35,6 +36,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
   const [color, setColor] = useState<ColorPref>("random");
   const [spectators, setSpectators] = useState(mode === "public");
   const [ranked, setRanked] = useState(mode === "public");
+  const mintLabel = `${CHESS_MINT.slice(0, 4)}...${CHESS_MINT.slice(-4)}`;
 
   const handleCreate = () => {
     // TODO: call tRPC `wager.create` → build escrow tx → sign → submit
@@ -61,8 +63,8 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
             {mode === "private" ? "Create private room" : "Post public challenge"}
           </DialogTitle>
           <DialogDescription className="text-[#8A8F98]">
-            Both sides lock the same stake. Winner takes the pot minus a 2% house fee.
-            Each player pays their own network gas.
+            No holding minimum is required. Both sides escrow the same $CHESS stake
+            using mint {mintLabel}; winner takes the pot minus a 2% house fee.
           </DialogDescription>
         </DialogHeader>
 

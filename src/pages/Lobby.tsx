@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { Coins, Filter, Plus, Lock, FlaskConical, Shield, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateWagerDialog } from "@/components/wager/CreateWagerDialog";
-import { IS_PLACEHOLDER } from "@/config/wager";
+import { CHESS_MINT, IS_PLACEHOLDER } from "@/config/wager";
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../../contracts/types";
 
@@ -42,6 +42,10 @@ const STAKE_BANDS = [
 
 function shortWallet(value: string, length = 6) {
   return `${value.slice(0, length)}...${value.slice(-4)}`;
+}
+
+function shortMint(value: string) {
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }
 
 export default function Lobby() {
@@ -93,7 +97,8 @@ export default function Lobby() {
           <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-3">Connect to enter the lobby</h1>
           <p className="text-[#8A8F98] mb-6">
-            Wagered matches require a connected wallet. Ranked is free — wagering is opt-in.
+            Wagered matches require a connected wallet, not a minimum $CHESS balance.
+            Stakes are only escrowed when you create or accept a challenge.
           </p>
           <Button
             onClick={connect}
@@ -112,7 +117,7 @@ export default function Lobby() {
         {IS_PLACEHOLDER && (
           <div className="mb-6 flex items-center gap-2 rounded-lg border border-[#14F195]/30 bg-[#14F195]/[0.05] px-3 py-2 text-xs font-mono text-[#14F195]">
             <FlaskConical className="w-3.5 h-3.5" />
-            Practice pot — $CHESS launches soon. Wagers settle in a placeholder mint until then.
+            Configure VITE_CHESS_MINT to pin wagers to your $CHESS mint.
           </div>
         )}
 
@@ -122,8 +127,13 @@ export default function Lobby() {
               Public wager lobby
             </h1>
             <p className="text-sm text-[#8A8F98] mt-1">
-              Open challenges. Accept any to lock the matching stake.
+              Open challenges using $CHESS only. No holding minimum is required to browse or enter the lobby.
             </p>
+            {!IS_PLACEHOLDER && (
+              <p className="mt-1 font-mono text-[11px] text-[#14F195]">
+                Mint: {shortMint(CHESS_MINT)}
+              </p>
+            )}
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Link

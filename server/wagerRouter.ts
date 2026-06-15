@@ -4,6 +4,7 @@ import { eq, and, desc, gt, gte, lte, sql } from "drizzle-orm";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { matches } from "../db/schema";
+import { env } from "./lib/env";
 
 const ROOM_CODE_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_CODE_LENGTH = 6;
@@ -11,6 +12,7 @@ const ROOM_CODE_TTL_MS = 15 * 60 * 1000;
 const MIN_STAKE = 10;
 const MAX_STAKE = 1_000_000;
 const HOUSE_FEE_BPS_DEFAULT = 200;
+const CHESS_MINT = env.chessMint;
 
 function generateRoomCode(): string {
   let code = "";
@@ -35,7 +37,7 @@ export const wagerRouter = createRouter({
       z.object({
         creatorWallet: z.string().min(32).max(44),
         stakeAmount: stakeSchema,
-        stakeMint: z.string(),
+        stakeMint: z.string().optional(),
         timeControl: timeControlSchema,
         colorPref: colorPrefSchema,
         isPrivate: z.boolean(),
@@ -45,6 +47,21 @@ export const wagerRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      const stakeMint = input.stakeMint ?? CHESS_MINT;
+
+      if (!CHESS_MINT) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Wager token mint is not configured.",
+        });
+      }
+
+      if (stakeMint !== CHESS_MINT) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Wagers must use the configured $CHESS mint.",
+        });
+      }
 
       let roomCode: string | null = null;
       if (input.isPrivate) {
@@ -89,7 +106,7 @@ export const wagerRouter = createRouter({
           status: "waiting",
           matchMode: input.isPrivate ? "wager_private" : "wager_public",
           stakeAmount: input.stakeAmount,
-          stakeMint: input.stakeMint,
+          stakeMint,
           isPrivate: input.isPrivate,
           roomCode,
           allowSpectators: input.isPrivate ? input.allowSpectators : true,
@@ -109,7 +126,7 @@ export const wagerRouter = createRouter({
         nextStep: {
           kind: "sign_create_match" as const,
           stakeAmount: input.stakeAmount,
-          stakeMint: input.stakeMint,
+          stakeMint,
           colorPref: input.colorPref,
         },
       };
@@ -136,6 +153,7 @@ export const wagerRouter = createRouter({
         eq(matches.status, "waiting"),
         gt(matches.expiresAt, new Date()),
       ];
+      if (CHESS_MINT) filters.push(eq(matches.stakeMint, CHESS_MINT));
       if (input?.stakeMin !== undefined)
         filters.push(gte(matches.stakeAmount, input.stakeMin));
       if (input?.stakeMax !== undefined)
@@ -166,16 +184,17 @@ export const wagerRouter = createRouter({
     .input(z.object({ code: z.string().length(6) }))
     .query(async ({ input }) => {
       const db = await getDb();
+      const filters = [
+        eq(matches.roomCode, input.code.toUpperCase()),
+        eq(matches.status, "waiting"),
+        gt(matches.expiresAt, new Date()),
+      ];
+      if (CHESS_MINT) filters.push(eq(matches.stakeMint, CHESS_MINT));
+
       const row = await db
         .select()
         .from(matches)
-        .where(
-          and(
-            eq(matches.roomCode, input.code.toUpperCase()),
-            eq(matches.status, "waiting"),
-            gt(matches.expiresAt, new Date())
-          )
-        )
+        .where(and(...filters))
         .limit(1);
       if (row.length === 0) return null;
       const m = row[0];

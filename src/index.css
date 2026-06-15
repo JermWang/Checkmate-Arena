@@ -142,6 +142,27 @@
 }
 
 /* Landing atmosphere */
+@keyframes landingAuraDrift {
+  0% {
+    background-position: 48% 0%, 13% 31%, 89% 48%, 45% 88%, 100% 12%, 0 0;
+  }
+  45% {
+    background-position: 58% 5%, 20% 38%, 82% 41%, 53% 78%, 91% 18%, 0 0;
+  }
+  100% {
+    background-position: 51% 11%, 11% 43%, 93% 55%, 42% 80%, 96% 7%, 0 0;
+  }
+}
+
+@keyframes landingGrainDrift {
+  0% {
+    background-position: 0 0, 0 0, 50% 50%, 0 0;
+  }
+  100% {
+    background-position: 42px 24px, -36px 52px, 58% 47%, 0 12px;
+  }
+}
+
 .landing-atmosphere {
   position: relative;
   isolation: isolate;
@@ -161,22 +182,31 @@
 
 .landing-atmosphere::before {
   background:
-    radial-gradient(ellipse at 54% 8%, rgba(20, 241, 149, 0.22) 0%, rgba(20, 241, 149, 0.08) 23%, transparent 46%),
-    radial-gradient(ellipse at 18% 34%, rgba(124, 77, 255, 0.15) 0%, rgba(124, 77, 255, 0.055) 25%, transparent 55%),
-    radial-gradient(ellipse at 86% 48%, rgba(255, 207, 107, 0.09) 0%, transparent 36%),
+    radial-gradient(ellipse at 54% 8%, rgba(20, 241, 149, 0.23) 0%, rgba(20, 241, 149, 0.08) 23%, transparent 46%),
+    radial-gradient(ellipse at 18% 34%, rgba(124, 77, 255, 0.3) 0%, rgba(124, 77, 255, 0.12) 25%, transparent 55%),
+    radial-gradient(ellipse at 86% 48%, rgba(255, 207, 107, 0.08) 0%, transparent 36%),
     radial-gradient(ellipse at 48% 84%, rgba(20, 241, 149, 0.11) 0%, transparent 42%),
+    radial-gradient(ellipse at 82% 18%, rgba(154, 112, 255, 0.24) 0%, rgba(154, 112, 255, 0.09) 28%, transparent 54%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, transparent 44%, rgba(0, 0, 0, 0.28) 100%);
-  filter: saturate(1.2);
+  background-size: 128% 122%, 116% 132%, 120% 120%, 126% 126%, 118% 118%, 100% 100%;
+  background-position: 48% 0%, 13% 31%, 89% 48%, 45% 88%, 100% 12%, 0 0;
+  filter: saturate(1.28);
   mix-blend-mode: screen;
-  opacity: 0.88;
+  opacity: 0.94;
+  transform: scale(1.08);
+  animation: landingAuraDrift 18s ease-in-out infinite alternate;
+  will-change: background-position;
 }
 
 .landing-atmosphere--closing::before {
   background:
     radial-gradient(ellipse at 18% 16%, rgba(20, 241, 149, 0.14) 0%, rgba(20, 241, 149, 0.055) 25%, transparent 52%),
-    radial-gradient(ellipse at 82% 30%, rgba(124, 77, 255, 0.14) 0%, rgba(124, 77, 255, 0.05) 24%, transparent 54%),
+    radial-gradient(ellipse at 82% 30%, rgba(124, 77, 255, 0.3) 0%, rgba(124, 77, 255, 0.12) 24%, transparent 54%),
     radial-gradient(ellipse at 50% 86%, rgba(255, 207, 107, 0.075) 0%, transparent 42%),
+    radial-gradient(ellipse at 38% 62%, rgba(154, 112, 255, 0.18) 0%, transparent 46%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 46%, rgba(0, 0, 0, 0.32) 100%);
+  background-size: 118% 124%, 126% 116%, 120% 120%, 122% 126%, 100% 100%;
+  background-position: 16% 12%, 84% 26%, 50% 86%, 38% 62%, 0 0;
 }
 
 .landing-atmosphere::after {
@@ -188,6 +218,8 @@
   background-size: 180px 180px, 220px 220px, 100% 100%, 100% 100%;
   mix-blend-mode: overlay;
   opacity: 0.34;
+  animation: landingGrainDrift 28s linear infinite alternate;
+  will-change: background-position;
 }
 
 .landing-section {
@@ -205,6 +237,13 @@
     radial-gradient(ellipse at 50% 8%, rgba(20, 241, 149, 0.085) 0%, transparent 42%),
     radial-gradient(ellipse at 82% 54%, rgba(124, 77, 255, 0.07) 0%, transparent 38%),
     linear-gradient(180deg, #050505 0%, #060706 48%, #050505 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-atmosphere::before,
+  .landing-atmosphere::after {
+    animation: none;
+  }
 }
 
 .landing-hero::after {
