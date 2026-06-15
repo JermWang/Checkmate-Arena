@@ -152,32 +152,34 @@ export default function Rewards() {
               <Wallet className="w-5 h-5 text-[#14F195]" />
               Recent Payouts
             </h2>
-            <div className="rounded-xl border border-white/5 overflow-hidden">
-              <div className="grid grid-cols-[100px_1fr_120px_100px] gap-4 px-6 py-3 bg-white/[0.03] text-xs text-[#8A8F98] uppercase tracking-wider">
-                <span>Epoch</span>
-                <span>Winners</span>
-                <span className="text-right">Pool</span>
-                <span className="text-right">Date</span>
-              </div>
-              {history.map((epoch) => (
-                <div key={epoch.epochId} className="grid grid-cols-[100px_1fr_120px_100px] gap-4 px-6 py-3 border-t border-white/5 hover:bg-white/[0.02]">
-                  <span className="text-sm font-mono">#{epoch.epochId}</span>
-                  <div className="flex items-center gap-2">
-                    {epoch.winners.slice(0, 3).map((w, i) => (
-                      <span key={i} className="text-xs text-[#8A8F98] font-mono">
-                        {w.walletAddress.slice(0, 6)}...
-                      </span>
-                    ))}
-                    {epoch.winners.length > 3 && (
-                      <span className="text-xs text-[#8A8F98]">+{epoch.winners.length - 3}</span>
-                    )}
-                  </div>
-                  <span className="text-sm font-mono text-right text-[#14F195]">{epoch.totalPool.toFixed(2)} SOL</span>
-                  <span className="text-xs text-[#8A8F98] text-right">
-                    {new Date(epoch.endsAt).toLocaleDateString()}
-                  </span>
+            <div className="overflow-x-auto rounded-xl border border-white/5">
+              <div className="min-w-[520px]">
+                <div className="grid grid-cols-[100px_1fr_120px_100px] gap-4 px-4 py-3 bg-white/[0.03] text-xs text-[#8A8F98] uppercase tracking-wider sm:px-6">
+                  <span>Epoch</span>
+                  <span>Winners</span>
+                  <span className="text-right">Pool</span>
+                  <span className="text-right">Date</span>
                 </div>
-              ))}
+                {history.map((epoch) => (
+                  <div key={epoch.epochId} className="grid grid-cols-[100px_1fr_120px_100px] gap-4 px-4 py-3 border-t border-white/5 hover:bg-white/[0.02] sm:px-6">
+                    <span className="text-sm font-mono">#{epoch.epochId}</span>
+                    <div className="flex items-center gap-2">
+                      {epoch.winners.slice(0, 3).map((w, i) => (
+                        <span key={i} className="text-xs text-[#8A8F98] font-mono">
+                          {w.walletAddress.slice(0, 6)}...
+                        </span>
+                      ))}
+                      {epoch.winners.length > 3 && (
+                        <span className="text-xs text-[#8A8F98]">+{epoch.winners.length - 3}</span>
+                      )}
+                    </div>
+                    <span className="text-sm font-mono text-right text-[#14F195]">{epoch.totalPool.toFixed(2)} SOL</span>
+                    <span className="text-xs text-[#8A8F98] text-right">
+                      {new Date(epoch.endsAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}

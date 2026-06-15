@@ -10,6 +10,17 @@ import { Paths } from "@contracts/constants";
 import { createNewEpoch } from "./queries/leaderboard";
 import { getDb } from "./queries/connection";
 
+// Never let a single rejected promise or stray throw take the whole server
+// down. Socket.IO event handlers and background timers run detached, so an
+// unhandled error here (e.g. a transient DB failure) would otherwise crash the
+// process — which in dev also kills the Vite server.
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+});
+
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));

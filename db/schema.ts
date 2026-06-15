@@ -101,6 +101,11 @@ export const chessPlayers = pgTable(
     id: bigserial("id", { mode: "number" }).primaryKey(),
     walletAddress: varchar("wallet_address", { length: 255 }).notNull().unique(),
     username: varchar("username", { length: 255 }),
+    avatar: text("avatar"),
+    bio: varchar("bio", { length: 280 }),
+    // Denormalized wager totals (base token units). Match settlement updates these.
+    totalEarnings: bigint("total_earnings", { mode: "number" }).default(0).notNull(),
+    totalWagered: bigint("total_wagered", { mode: "number" }).default(0).notNull(),
     currentRating: integer("current_rating").default(1000).notNull(),
     dailyScore: integer("daily_score").default(0).notNull(),
     lifetimeWins: integer("lifetime_wins").default(0).notNull(),

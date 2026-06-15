@@ -5,6 +5,7 @@ import { matchRouter } from "./matchRouter";
 import { rewardsRouter } from "./rewardsRouter";
 import { adminRouter } from "./adminRouter";
 import { wagerRouter } from "./wagerRouter";
+import { profileRouter } from "./profileRouter";
 import { createRouter, publicQuery } from "./middleware";
 
 export const appRouter = createRouter({
@@ -16,6 +17,7 @@ export const appRouter = createRouter({
   rewards: rewardsRouter,
   admin: adminRouter,
   wager: wagerRouter,
+  profile: profileRouter,
 });
 
 export type AppRouter = typeof appRouter;

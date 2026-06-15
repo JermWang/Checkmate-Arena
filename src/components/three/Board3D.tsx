@@ -1,10 +1,12 @@
-import { Suspense, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { useChessSet, findMesh, PIECE_NODE, BOARD_NODE } from "./chessSet";
 
 const BRAND = "#14F195";
+const CAPTURE = "#ff5470"; // capture-move indicator (lands on an enemy piece)
+const BACKDROP = "#e7ddc6"; // cream backdrop — keeps dark pieces readable
 const FILES = "abcdefgh";
 const FIELD = 8; // playing field spans 8 world units → squareSize = 1
 const SQ = FIELD / 8;
@@ -154,13 +156,22 @@ function Pieces({
 
 function ClickGrid({
   onSquare,
+  onPieceHover,
   selected,
   legal,
+  occupied,
+  interactive,
 }: {
   onSquare?: (sq: string) => void;
+  onPieceHover?: (sq: string) => void;
   selected: string | null;
   legal: string[];
+  occupied: Set<string>;
+  interactive: boolean;
 }) {
+  const [hovered, setHovered] = useState<string | null>(null);
+  const legalSet = useMemo(() => new Set(legal), [legal]);
+
   const squares = useMemo(() => {
     const arr: { sq: string; x: number; z: number }[] = [];
     for (let f = 0; f < 8; f++)
@@ -171,14 +182,33 @@ function ClickGrid({
     return arr;
   }, []);
 
+  // Clear hover + reset the cursor whenever interactivity turns off (e.g. the
+  // game ends) so we never leave a stale "pointer" cursor behind.
+  useEffect(() => {
+    if (!interactive) {
+      setHovered(null);
+      document.body.style.cursor = "default";
+    }
+    return () => {
+      document.body.style.cursor = "default";
+    };
+  }, [interactive]);
+
+  const setCursor = (value: string) => {
+    if (interactive) document.body.style.cursor = value;
+  };
+
   return (
     <group>
       {squares.map(({ sq, x, z }) => {
         const isSel = selected === sq;
-        const isLegal = legal.includes(sq);
+        const isLegal = legalSet.has(sq);
+        const isCapture = isLegal && occupied.has(sq);
+        const isHover = interactive && hovered === sq && !isSel;
+        const hoverHasPiece = isHover && occupied.has(sq);
         return (
           <group key={sq} position={[x, 0, z]}>
-            {/* invisible clickable plane */}
+            {/* invisible clickable / hoverable plane */}
             <mesh
               rotation={[-Math.PI / 2, 0, 0]}
               position={[0, 0.001, 0]}
@@ -186,14 +216,48 @@ function ClickGrid({
                 e.stopPropagation();
                 onSquare?.(sq);
               }}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                if (!interactive) return;
+                setHovered(sq);
+                if (occupied.has(sq)) onPieceHover?.(sq);
+                setCursor("pointer");
+              }}
+              onPointerOut={() => {
+                setHovered((h) => (h === sq ? null : h));
+                setCursor("default");
+              }}
             >
               <planeGeometry args={[SQ, SQ]} />
-              <meshBasicMaterial transparent opacity={isSel ? 0.28 : 0} color={BRAND} />
+              <meshBasicMaterial
+                transparent
+                opacity={isSel ? 0.32 : hoverHasPiece ? 0.26 : isHover ? 0.14 : 0}
+                color={BRAND}
+              />
             </mesh>
-            {isLegal && (
+
+            {/* Square outline: solid on the selected square, lighter on hover —
+                so a player always sees which piece/square they're affecting. */}
+            {(isSel || isHover) && (
+              <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[SQ * 0.45, SQ * 0.5, 36]} />
+                <meshBasicMaterial transparent opacity={isSel ? 0.95 : 0.55} color={BRAND} />
+              </mesh>
+            )}
+
+            {/* Legal move onto an empty square: filled dot. */}
+            {isLegal && !isCapture && (
               <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[SQ * 0.16, 24]} />
-                <meshBasicMaterial transparent opacity={0.5} color={BRAND} />
+                <meshBasicMaterial transparent opacity={0.55} color={BRAND} />
+              </mesh>
+            )}
+
+            {/* Legal capture: red ring around the target piece. */}
+            {isCapture && (
+              <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[SQ * 0.3, SQ * 0.44, 36]} />
+                <meshBasicMaterial transparent opacity={0.85} color={CAPTURE} />
               </mesh>
             )}
           </group>
@@ -207,23 +271,39 @@ function Scene({
   fen,
   orientation,
   onSquare,
+  onPieceHover,
   selected,
   legal,
+  interactive,
 }: {
   fen: string;
   orientation: "white" | "black";
   onSquare?: (sq: string) => void;
+  onPieceHover?: (sq: string) => void;
   selected: string | null;
   legal: string[];
+  interactive: boolean;
 }) {
   const assets = useBoardAssets();
   const groupRef = useRef<THREE.Group>(null);
+
+  const occupied = useMemo(
+    () => new Set(parseFEN(fen).map((p) => FILES[p.file] + p.rank)),
+    [fen]
+  );
 
   return (
     <group ref={groupRef} rotation={[0, orientation === "black" ? Math.PI : 0, 0]}>
       <mesh geometry={assets.boardGeo} material={assets.boardMat} receiveShadow />
       <Pieces fen={fen} assets={assets} />
-      <ClickGrid onSquare={onSquare} selected={selected} legal={legal} />
+      <ClickGrid
+        onSquare={onSquare}
+        onPieceHover={onPieceHover}
+        selected={selected}
+        legal={legal}
+        occupied={occupied}
+        interactive={interactive}
+      />
     </group>
   );
 }
@@ -232,30 +312,41 @@ export function Board3D({
   fen,
   orientation = "white",
   onSquareClick,
+  onPieceHover,
   selectedSquare = null,
   legalMoves = [],
+  interactive = true,
 }: {
   fen: string;
   orientation?: "white" | "black";
   onSquareClick?: (sq: string) => void;
+  onPieceHover?: (sq: string) => void;
   selectedSquare?: string | null;
   legalMoves?: string[];
+  interactive?: boolean;
 }) {
   return (
     <Canvas
       shadows
       dpr={[1, 1.6]}
       gl={{ antialias: true, alpha: true }}
-      camera={{ position: [0, 9, 9.6], fov: 34 }}
+      camera={{ position: [0, 11, 12], fov: 36 }}
+      // Measure the container via offsetWidth/Height (synchronous) instead of the
+      // default ResizeObserver path, which races with the `aspect-square` parent
+      // and can leave the canvas stuck at its 300x150 default size.
+      resize={{ offsetSize: true }}
+      style={{ width: "100%", height: "100%" }}
     >
-      <color attach="background" args={["#0a0a0f"]} />
+      <color attach="background" args={[BACKDROP]} />
       <Suspense fallback={null}>
         <Scene
           fen={fen}
           orientation={orientation}
           onSquare={onSquareClick}
+          onPieceHover={onPieceHover}
           selected={selectedSquare}
           legal={legalMoves}
+          interactive={interactive}
         />
         <ContactShadows
           position={[0, -0.01, 0]}
@@ -277,11 +368,11 @@ export function Board3D({
         <Environment preset="city" environmentIntensity={0.3} />
         <OrbitControls
           enablePan={false}
-          minDistance={7}
-          maxDistance={16}
+          minDistance={9}
+          maxDistance={18}
           minPolarAngle={0.2}
           maxPolarAngle={Math.PI / 2.2}
-          target={[0, 0.4, 0]}
+          target={[0, 0, 0]}
         />
       </Suspense>
     </Canvas>

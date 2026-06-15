@@ -39,6 +39,12 @@
     font-family: 'Space Grotesk', system-ui, sans-serif;
   }
 
+  @media (max-width: 767px) {
+    #root {
+      padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    }
+  }
+
   * {
     @apply border-border;
   }

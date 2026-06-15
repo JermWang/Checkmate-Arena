@@ -116,7 +116,7 @@ export default function Lobby() {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
               Public wager lobby
@@ -125,10 +125,10 @@ export default function Lobby() {
               Open challenges. Accept any to lock the matching stake.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Link
               to="/lobby/private"
-              className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 text-xs font-medium text-white hover:bg-white/5 transition-all"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-white/20 text-xs font-medium text-white hover:bg-white/5 transition-all"
             >
               <Lock className="w-3.5 h-3.5" />
               Private room
@@ -188,28 +188,30 @@ export default function Lobby() {
         </section>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <Filter className="w-3.5 h-3.5 text-[#8A8F98]" />
-          {STAKE_BANDS.map((b) => (
-            <Chip
-              key={b.label}
-              on={band.label === b.label}
-              onClick={() => setBand(b)}
-            >
-              {b.label}
-            </Chip>
-          ))}
-          <div className="mx-2 h-4 w-px bg-white/10" />
-          {TC_FILTERS.map((t) => (
-            <Chip key={t} on={tc === t} onClick={() => setTc(t)}>
-              {t}
-            </Chip>
-          ))}
+        <div className="mb-4 overflow-x-auto pb-1">
+          <div className="flex min-w-max items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-[#8A8F98]" />
+            {STAKE_BANDS.map((b) => (
+              <Chip
+                key={b.label}
+                on={band.label === b.label}
+                onClick={() => setBand(b)}
+              >
+                {b.label}
+              </Chip>
+            ))}
+            <div className="mx-2 h-4 w-px bg-white/10" />
+            {TC_FILTERS.map((t) => (
+              <Chip key={t} on={tc === t} onClick={() => setTc(t)}>
+                {t}
+              </Chip>
+            ))}
+          </div>
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-white/5 bg-white/[0.02]">
-          <table className="w-full">
+        <div className="overflow-x-auto rounded-xl border border-white/5 bg-white/[0.02]">
+          <table className="w-full min-w-[680px]">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wider text-[#8A8F98]">
                 <th className="px-4 py-3 font-normal">Player</th>

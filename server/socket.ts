@@ -18,7 +18,7 @@ import {
 import { updateLeaderboardScore, getCurrentEpoch } from "./queries/leaderboard";
 import { createAdminFlag } from "./queries/admin";
 import { GAME_CONFIG, getKFactor, getRatingBucket } from "../src/config/game";
-import type { ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../contracts/types";
+import type { ChatMessage, ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../contracts/types";
 
 // ============================================================
 // In-memory matchmaking and game state
@@ -40,6 +40,12 @@ interface ActiveGame {
   blackSocket: string;
   whiteTime: number;
   blackTime: number;
+  // Snapshotted at match start so the result can be computed/emitted without a
+  // DB round-trip when the game ends.
+  whiteRating: number;
+  blackRating: number;
+  whiteStreak: number;
+  blackStreak: number;
   currentTurn: "w" | "b";
   lastMoveTime: number;
   moveCount: number;
@@ -56,6 +62,59 @@ const spectatorsByMatch = new Map<number, Set<string>>();
 const socketToSpectatedMatch = new Map<string, number>();
 
 let io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
+
+// Gameplay state is fully in-memory; the database is only used for persistence
+// (users, match records, ratings, leaderboard). So a DB outage should never
+// break a live game — every DB call is wrapped here and falls back gracefully.
+// When the DB is unavailable, matches still run and finish locally with synthetic
+// match ids (negative) and default ratings.
+let synthMatchId = -1;
+
+async function safeDb<T>(label: string, op: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await op();
+  } catch (err) {
+    console.error(`[socket] DB op "${label}" failed; continuing without persistence:`, (err as Error)?.message ?? err);
+    return fallback;
+  }
+}
+
+// ============================================================
+// Chat (in-memory, per-channel ring buffer)
+// ============================================================
+const CHAT_HISTORY_LIMIT = 80;
+const CHAT_MAX_LEN = 300;
+const CHAT_MIN_INTERVAL_MS = 400;
+const chatHistory = new Map<string, ChatMessage[]>(); // channel -> recent messages
+const lastChatAt = new Map<string, number>(); // socketId -> last send ts
+// Tiny per-process cache of wallet -> {username, avatar} so chat doesn't hit the
+// DB on every message.
+const profileCache = new Map<string, { username: string | null; avatar: string | null; at: number }>();
+const PROFILE_TTL_MS = 60_000;
+
+function sanitizeChannel(raw: string): string | null {
+  if (typeof raw !== "string") return null;
+  if (raw === "lobby") return "lobby";
+  const m = /^match:(\d+)$/.exec(raw);
+  if (m) return raw;
+  return null;
+}
+
+async function resolveProfile(walletAddress: string) {
+  const cached = profileCache.get(walletAddress);
+  if (cached && Date.now() - cached.at < PROFILE_TTL_MS) return cached;
+  const user = await safeDb("chat resolveProfile", () => getUserByWallet(walletAddress), null);
+  const entry = { username: user?.username ?? null, avatar: user?.avatar ?? null, at: Date.now() };
+  profileCache.set(walletAddress, entry);
+  return entry;
+}
+
+function pushChat(channel: string, msg: ChatMessage) {
+  const list = chatHistory.get(channel) ?? [];
+  list.push(msg);
+  if (list.length > CHAT_HISTORY_LIMIT) list.splice(0, list.length - CHAT_HISTORY_LIMIT);
+  chatHistory.set(channel, list);
+}
 
 function spectatorRoom(matchId: number) {
   return `spectators:${matchId}`;
@@ -210,17 +269,24 @@ async function startMatch(player1: QueueEntry, player2: QueueEntry) {
   const whiteEntry = Math.random() > 0.5 ? player1 : player2;
   const blackEntry = whiteEntry === player1 ? player2 : player1;
 
-  // Get/create users
-  const whiteUser = await findOrCreateUser(whiteEntry.walletAddress);
-  const blackUser = await findOrCreateUser(blackEntry.walletAddress);
+  // Get/create users (fall back to the queue rating if the DB is unavailable)
+  const whiteUser = await safeDb("findOrCreateUser(white)", () => findOrCreateUser(whiteEntry.walletAddress), null);
+  const blackUser = await safeDb("findOrCreateUser(black)", () => findOrCreateUser(blackEntry.walletAddress), null);
+  const whiteRatingBefore = whiteUser?.currentRating ?? whiteEntry.rating;
+  const blackRatingBefore = blackUser?.currentRating ?? blackEntry.rating;
 
-  // Create match in DB
-  const matchId = await createMatch({
-    whiteWallet: whiteEntry.walletAddress,
-    blackWallet: blackEntry.walletAddress,
-    whiteRatingBefore: whiteUser.currentRating,
-    blackRatingBefore: blackUser.currentRating,
-  });
+  // Create match in DB (synthetic negative id when persistence is unavailable)
+  const matchId = await safeDb(
+    "createMatch",
+    () =>
+      createMatch({
+        whiteWallet: whiteEntry.walletAddress,
+        blackWallet: blackEntry.walletAddress,
+        whiteRatingBefore,
+        blackRatingBefore,
+      }),
+    synthMatchId--,
+  );
 
   // Create game state
   const chess = new Chess();
@@ -233,6 +299,10 @@ async function startMatch(player1: QueueEntry, player2: QueueEntry) {
     blackSocket: blackEntry.socketId,
     whiteTime: GAME_CONFIG.timeControlSeconds * 1000,
     blackTime: GAME_CONFIG.timeControlSeconds * 1000,
+    whiteRating: whiteRatingBefore,
+    blackRating: blackRatingBefore,
+    whiteStreak: whiteUser?.currentStreak ?? 0,
+    blackStreak: blackUser?.currentStreak ?? 0,
     currentTurn: "w",
     lastMoveTime: Date.now(),
     moveCount: 0,
@@ -329,14 +399,16 @@ async function endMatch(
   else if (winnerWallet === game.whiteWallet) chessResult = "1-0";
   else chessResult = "0-1";
 
-  // Calculate ELO
-  const whiteUser = await getUserByWallet(game.whiteWallet);
-  const blackUser = await getUserByWallet(game.blackWallet);
-  if (!whiteUser || !blackUser) return;
+  // Calculate ELO from the ratings snapshotted at match start — no DB round-trip,
+  // so the result is emitted to players immediately below.
+  const whiteRating = game.whiteRating;
+  const blackRating = game.blackRating;
+  const whiteStreak = game.whiteStreak;
+  const blackStreak = game.blackStreak;
 
   const { whiteNew, blackNew, whiteDelta, blackDelta } = calculateElo(
-    whiteUser.currentRating,
-    blackUser.currentRating,
+    whiteRating,
+    blackRating,
     chessResult
   );
 
@@ -344,56 +416,61 @@ async function endMatch(
   const whiteResult = chessResult === "1-0" ? "win" : chessResult === "0-1" ? "loss" : "draw";
   const blackResult = chessResult === "0-1" ? "win" : chessResult === "1-0" ? "loss" : "draw";
   const isCheckmate = resultType === "checkmate";
-  const ratingDiff = blackUser.currentRating - whiteUser.currentRating;
+  const ratingDiff = blackRating - whiteRating;
 
   const whiteScoreDelta = calculateDailyScore(
     whiteResult,
     isCheckmate,
-    whiteUser.currentStreak,
+    whiteStreak,
     -ratingDiff,
     resultType
   );
   const blackScoreDelta = calculateDailyScore(
     blackResult,
     isCheckmate,
-    blackUser.currentStreak,
+    blackStreak,
     ratingDiff,
     resultType
   );
 
-  // Update ratings
-  await updateUserRating(game.whiteWallet, whiteNew);
-  await updateUserRating(game.blackWallet, blackNew);
-
-  // Record match results
-  await recordMatchResult(game.whiteWallet, whiteResult, whiteScoreDelta);
-  await recordMatchResult(game.blackWallet, blackResult, blackScoreDelta);
-
-  // Update leaderboard
-  const epoch = await getCurrentEpoch();
-  if (epoch) {
-    await updateLeaderboardScore(game.whiteWallet, epoch.id, whiteScoreDelta, whiteResult);
-    await updateLeaderboardScore(game.blackWallet, epoch.id, blackScoreDelta, blackResult);
-  }
-
-  // Finalize match in DB
-  await finalizeMatch(matchId, {
-    winnerWallet,
-    loserWallet,
-    resultType,
-    pgn: game.chess.pgn(),
-    moveHistory: game.chess.history(),
-    whiteRatingAfter: whiteNew,
-    blackRatingAfter: blackNew,
-  });
-
-  // Emit result
+  // Emit the result to players/spectators FIRST so the outcome is instant and
+  // never gated on database latency. Persistence happens afterwards, best-effort.
   io.to(game.whiteSocket).to(game.blackSocket).to(spectatorRoom(matchId)).emit("match:ended", {
     result: resultType,
     winner: winnerWallet,
     whiteRatingChange: whiteDelta,
     blackRatingChange: blackDelta,
   });
+
+  // Persist results in the background (best-effort — never block on the DB)
+  const pgn = game.chess.pgn();
+  const history = game.chess.history();
+  void (async () => {
+    await safeDb("updateUserRating(white)", () => updateUserRating(game.whiteWallet, whiteNew), undefined);
+    await safeDb("updateUserRating(black)", () => updateUserRating(game.blackWallet, blackNew), undefined);
+
+    await safeDb("recordMatchResult(white)", () => recordMatchResult(game.whiteWallet, whiteResult, whiteScoreDelta), undefined);
+    await safeDb("recordMatchResult(black)", () => recordMatchResult(game.blackWallet, blackResult, blackScoreDelta), undefined);
+
+    const epoch = await safeDb("getCurrentEpoch", () => getCurrentEpoch(), null);
+    if (epoch) {
+      await safeDb("updateLeaderboardScore(white)", () => updateLeaderboardScore(game.whiteWallet, epoch.id, whiteScoreDelta, whiteResult), undefined);
+      await safeDb("updateLeaderboardScore(black)", () => updateLeaderboardScore(game.blackWallet, epoch.id, blackScoreDelta, blackResult), undefined);
+    }
+
+    // Only persist the match record when it has a real (DB-backed) id
+    if (matchId >= 0) {
+      await safeDb("finalizeMatch", () => finalizeMatch(matchId, {
+        winnerWallet,
+        loserWallet,
+        resultType,
+        pgn,
+        moveHistory: history,
+        whiteRatingAfter: whiteNew,
+        blackRatingAfter: blackNew,
+      }), undefined);
+    }
+  })();
 
   // Cleanup
   const spectators = spectatorsByMatch.get(matchId);
@@ -412,7 +489,6 @@ async function endMatch(
 }
 
 async function runAntiCheat(matchId: number, game: ActiveGame) {
-  const moves = game.chess.history();
   const avgMoveTime = game.moveCount > 0
     ? (Date.now() - game.lastMoveTime) / game.moveCount
     : 0;
@@ -423,14 +499,15 @@ async function runAntiCheat(matchId: number, game: ActiveGame) {
     flags.push("very_fast_complex_game");
   }
 
-  if (flags.length > 0 && game.chess.turn() === "b" ? game.blackWallet : game.whiteWallet) {
+  if (flags.length > 0) {
+    if (matchId < 0) return;
     const flaggedWallet = game.chess.turn() === "b" ? game.whiteWallet : game.blackWallet;
-    await createAdminFlag({
+    await safeDb("createAdminFlag", () => createAdminFlag({
       walletAddress: flaggedWallet,
       matchId,
       reason: flags.join(", "),
       severity: flags.includes("very_fast_complex_game") ? "medium" : "low",
-    });
+    }), undefined);
   }
 }
 
@@ -452,7 +529,46 @@ export function setupSocketIO(httpServer: HTTPServer) {
     socket.on("wallet:connect", async ({ walletAddress }) => {
       walletToSocket.set(walletAddress, socket.id);
       socketToWallet.set(socket.id, walletAddress);
-      await findOrCreateUser(walletAddress);
+      await safeDb("wallet:connect findOrCreateUser", () => findOrCreateUser(walletAddress), null);
+    });
+
+    // ── Chat ──────────────────────────────────────────────────
+    socket.on("chat:join", ({ channel }) => {
+      const ch = sanitizeChannel(channel);
+      if (!ch) return;
+      socket.join(`chat:${ch}`);
+      socket.emit("chat:history", { channel: ch, messages: chatHistory.get(ch) ?? [] });
+    });
+
+    socket.on("chat:send", async ({ channel, text }) => {
+      const ch = sanitizeChannel(channel);
+      if (!ch) return;
+
+      const wallet = socketToWallet.get(socket.id);
+      if (!wallet) return; // must identify via wallet:connect first
+
+      const trimmed = (text ?? "").toString().replace(/\s+/g, " ").trim().slice(0, CHAT_MAX_LEN);
+      if (!trimmed) return;
+
+      // Basic per-socket rate limit.
+      const now = Date.now();
+      const last = lastChatAt.get(socket.id) ?? 0;
+      if (now - last < CHAT_MIN_INTERVAL_MS) return;
+      lastChatAt.set(socket.id, now);
+
+      const profile = await resolveProfile(wallet);
+      const msg: ChatMessage = {
+        id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+        walletAddress: wallet,
+        username: profile.username,
+        avatar: profile.avatar,
+        text: trimmed,
+        ts: now,
+        channel: ch,
+      };
+
+      pushChat(ch, msg);
+      io.to(`chat:${ch}`).emit("chat:message", msg);
     });
 
     // Join queue
@@ -551,18 +667,21 @@ export function setupSocketIO(httpServer: HTTPServer) {
           return;
         }
 
-        // Save move to DB
-        await saveMove({
-          matchId,
-          moveNumber: ++game.moveCount,
-          walletAddress: wallet,
-          san: move.san,
-          fromSquare: from,
-          toSquare: to,
-          promotion,
-          fenAfter: game.chess.fen(),
-          moveTimeMs: Date.now() - game.lastMoveTime,
-        });
+        // Save move to DB (best-effort; never fail a legal move on a DB error)
+        game.moveCount++;
+        if (matchId >= 0) {
+          await safeDb("saveMove", () => saveMove({
+            matchId,
+            moveNumber: game.moveCount,
+            walletAddress: wallet,
+            san: move.san,
+            fromSquare: from,
+            toSquare: to,
+            promotion,
+            fenAfter: game.chess.fen(),
+            moveTimeMs: Date.now() - game.lastMoveTime,
+          }), undefined);
+        }
 
         // Update clock
         const now = Date.now();
@@ -649,6 +768,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
       walletToSocket.delete(wallet ?? "");
       socketToWallet.delete(socket.id);
       socketToMatch.delete(socket.id);
+      lastChatAt.delete(socket.id);
     });
   });
 

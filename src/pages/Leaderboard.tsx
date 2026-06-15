@@ -70,32 +70,33 @@ export default function Leaderboard() {
         </div>
 
         {/* Table */}
-        <div className="rounded-xl border border-white/5 overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-[60px_1fr_120px_100px_100px] md:grid-cols-[80px_1fr_120px_120px_120px_120px] gap-4 px-4 md:px-6 py-3 bg-white/[0.03] text-xs text-[#8A8F98] uppercase tracking-wider">
-            <span>Rank</span>
-            <span>Player</span>
-            <span className="text-right">Rating</span>
-            <span className="text-right">{view === "daily" ? "Score" : "Wins"}</span>
-            <span className="text-right hidden md:block">{view === "daily" ? "W/L/D" : "Games"}</span>
-            <span className="text-right hidden md:block">Bucket</span>
-          </div>
-
-          {/* Rows */}
-          {isLoading ? (
-            <div className="px-6 py-12 text-center text-[#8A8F98]">
-              <div className="w-6 h-6 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              Loading...
+        <div className="overflow-x-auto rounded-xl border border-white/5">
+          <div className="min-w-[520px]">
+            {/* Header */}
+            <div className="grid grid-cols-[60px_1fr_120px_100px_100px] md:grid-cols-[80px_1fr_120px_120px_120px_120px] gap-4 px-4 md:px-6 py-3 bg-white/[0.03] text-xs text-[#8A8F98] uppercase tracking-wider">
+              <span>Rank</span>
+              <span>Player</span>
+              <span className="text-right">Rating</span>
+              <span className="text-right">{view === "daily" ? "Score" : "Wins"}</span>
+              <span className="text-right hidden md:block">{view === "daily" ? "W/L/D" : "Games"}</span>
+              <span className="text-right hidden md:block">Bucket</span>
             </div>
-          ) : players && players.length > 0 ? (
-            <div className="divide-y divide-white/5">
-              {players.map((player, i) => (
-                <div
-                  key={player.walletAddress}
-                  className={`grid grid-cols-[60px_1fr_120px_100px_100px] md:grid-cols-[80px_1fr_120px_120px_120px_120px] gap-4 px-4 md:px-6 py-3 items-center hover:bg-white/[0.02] transition-colors ${
-                    i < 3 ? "bg-[#14F195]/[0.02]" : ""
-                  }`}
-                >
+
+            {/* Rows */}
+            {isLoading ? (
+              <div className="px-6 py-12 text-center text-[#8A8F98]">
+                <div className="w-6 h-6 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                Loading...
+              </div>
+            ) : players && players.length > 0 ? (
+              <div className="divide-y divide-white/5">
+                {players.map((player, i) => (
+                  <div
+                    key={player.walletAddress}
+                    className={`grid grid-cols-[60px_1fr_120px_100px_100px] md:grid-cols-[80px_1fr_120px_120px_120px_120px] gap-4 px-4 md:px-6 py-3 items-center hover:bg-white/[0.02] transition-colors ${
+                      i < 3 ? "bg-[#14F195]/[0.02]" : ""
+                    }`}
+                  >
                   {/* Rank */}
                   <div className="flex items-center">
                     {i === 0 ? (
@@ -143,15 +144,16 @@ export default function Leaderboard() {
                       {getRatingBucket(player.rating)}
                     </span>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-6 py-12 text-center text-[#8A8F98]">
-              <Swords className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              <p>No players yet. Be the first to play!</p>
-            </div>
-          )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-6 py-12 text-center text-[#8A8F98]">
+                <Swords className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                <p>No players yet. Be the first to play!</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

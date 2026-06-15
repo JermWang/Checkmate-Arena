@@ -94,8 +94,20 @@ export interface LiveMatchSummary {
   viewers: number;
 }
 
+export interface ChatMessage {
+  id: string;
+  walletAddress: string;
+  username: string | null;
+  avatar: string | null;
+  text: string;
+  ts: number;
+  channel: string; // "lobby" or `match:<id>`
+}
+
 // Socket.IO event types
 export interface ServerToClientEvents {
+  "chat:message": (data: ChatMessage) => void;
+  "chat:history": (data: { channel: string; messages: ChatMessage[] }) => void;
   "eligibility:updated": (data: TokenEligibility) => void;
   "queue:joined": (data: { position: number }) => void;
   "queue:left": () => void;
@@ -116,6 +128,8 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   "wallet:connect": (data: { walletAddress: string }) => void;
+  "chat:join": (data: { channel: string }) => void;
+  "chat:send": (data: { channel: string; text: string }) => void;
   "queue:join": (data: { walletAddress: string; rating: number }) => void;
   "queue:leave": () => void;
   "match:move": (data: { matchId: number; from: string; to: string; promotion?: string }) => void;

@@ -1,16 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import { GAME_CONFIG, getRatingBucket } from "@/config/game";
-import { Swords, Shield, LogOut, RotateCcw, Flag, Eye } from "lucide-react";
+import { Swords, Shield, LogOut, RotateCcw, Flag, Eye, Box, Grid3x3 } from "lucide-react";
 import type { ServerToClientEvents, ClientToServerEvents } from "../../contracts/types";
 import { io, type Socket } from "socket.io-client";
 import { Board3D } from "@/components/three/Board3D";
+import { Board2D } from "@/components/Board2D";
+import { ChatPanel } from "@/components/ChatPanel";
+import { playGameSound, primeGameAudio } from "@/lib/gameAudio";
 import type { Chess, Move, Square } from "chess.js";
 import { useSearchParams } from "react-router";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
   import.meta.env.DEV ? "http://localhost:3001" : window.location.origin
 );
+const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export default function Play() {
   const { walletAddress, connected, connect, checkEligibility } = useWallet();
@@ -25,7 +29,7 @@ export default function Play() {
   const [opponent, setOpponent] = useState<string>("");
   const [whitePlayer, setWhitePlayer] = useState<string>("");
   const [blackPlayer, setBlackPlayer] = useState<string>("");
-  const [fen, setFen] = useState("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  const [fen, setFen] = useState(START_FEN);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [legalMoves, setLegalMoves] = useState<string[]>([]);
   const [whiteTime, setWhiteTime] = useState(300000);
@@ -35,6 +39,11 @@ export default function Play() {
   const [ratingChange, setRatingChange] = useState(0);
   const [spectatorCount, setSpectatorCount] = useState(0);
   const [queuePosition, setQueuePosition] = useState(0);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [boardMode, setBoardMode] = useState<"3d" | "2d">(() => {
+    if (typeof window === "undefined") return "3d";
+    return localStorage.getItem("checkmate.boardMode") === "2d" ? "2d" : "3d";
+  });
   const chessRef = useRef<Chess | null>(null);
   const colorRef = useRef(color);
   const matchIdRef = useRef(matchId);
@@ -62,6 +71,7 @@ export default function Play() {
       };
     }
     if (connected && walletAddress) {
+      setIsDemoMode(false);
       setGameState("idle");
       checkEligibility().then(() => {
         if (cancelled) return;
@@ -193,6 +203,7 @@ export default function Play() {
 
   const joinQueue = useCallback(() => {
     if (!socket || !walletAddress) return;
+    setIsDemoMode(false);
 
     if (!socket.connected) {
       socket.once("connect", () => {
@@ -209,9 +220,46 @@ export default function Play() {
     setGameState("idle");
   }, [socket]);
 
+  const startDemo = useCallback(async () => {
+    primeGameAudio();
+    const { Chess } = await import("chess.js");
+    const chess = new Chess();
+    chessRef.current = chess;
+    setIsDemoMode(true);
+    setGameState("playing");
+    setMatchId(null);
+    setColor("white");
+    setOpponent("Demo Bot");
+    setWhitePlayer("You");
+    setBlackPlayer("Demo Bot");
+    setFen(START_FEN);
+    setSelectedSquare(null);
+    setLegalMoves([]);
+    setWhiteTime(300000);
+    setBlackTime(300000);
+    setMoveHistory([]);
+    setResult(null);
+    setRatingChange(0);
+    setSpectatorCount(0);
+  }, []);
+
+  const selectBoardMode = useCallback((mode: "3d" | "2d") => {
+    setBoardMode(mode);
+    try {
+      localStorage.setItem("checkmate.boardMode", mode);
+    } catch {
+      // ignore storage errors (private mode etc.)
+    }
+  }, []);
+
+  const handlePieceHover = useCallback(() => {
+    playGameSound("piece-hover");
+  }, []);
+
   const handleSquareClick = useCallback(
     (square: string) => {
-      if (gameState !== "playing" || !socket || !matchId || !chessRef.current) return;
+      if (gameState !== "playing" || !chessRef.current) return;
+      if (!isDemoMode && (!socket || !matchId)) return;
 
       const chess = chessRef.current;
       const isPlayerTurn = chess.turn() === (color === "white" ? "w" : "b");
@@ -222,6 +270,43 @@ export default function Play() {
         const targetMove = moves.find((m: Move) => m.to === square);
 
         if (targetMove) {
+          playGameSound("piece-move");
+
+          if (isDemoMode) {
+            const played = chess.move({
+              from: selectedSquare,
+              to: square,
+              promotion: targetMove.promotion || "q",
+            });
+            if (!played) return;
+
+            const nextHistory = [played.san];
+            if (!chess.isGameOver()) {
+              const replies = chess.moves({ verbose: true }) as Move[];
+              const reply = replies[Math.floor(Math.random() * replies.length)];
+              if (reply) {
+                const botMove = chess.move({
+                  from: reply.from,
+                  to: reply.to,
+                  promotion: reply.promotion || "q",
+                });
+                if (botMove) nextHistory.push(botMove.san);
+              }
+            }
+
+            setFen(chess.fen());
+            setMoveHistory((prev) => [...prev, ...nextHistory]);
+            setSelectedSquare(null);
+            setLegalMoves([]);
+            if (chess.isGameOver()) {
+              setResult(chess.isCheckmate() ? "checkmate" : "draw");
+              setGameState("ended");
+            }
+            return;
+          }
+
+          if (!socket || matchId === null) return;
+
           socket.emit("match:move", {
             matchId,
             from: selectedSquare,
@@ -235,6 +320,7 @@ export default function Play() {
 
         const piece = chess.get(square as Square);
         if (piece && piece.color === (color === "white" ? "w" : "b")) {
+          playGameSound("piece-select");
           setSelectedSquare(square);
           const possibleMoves = chess.moves({ square: square as Square, verbose: true });
           setLegalMoves(possibleMoves.map((m: Move) => m.to));
@@ -245,20 +331,26 @@ export default function Play() {
       } else {
         const piece = chess.get(square as Square);
         if (piece && piece.color === (color === "white" ? "w" : "b")) {
+          playGameSound("piece-select");
           setSelectedSquare(square);
           const possibleMoves = chess.moves({ square: square as Square, verbose: true });
           setLegalMoves(possibleMoves.map((m: Move) => m.to));
         }
       }
     },
-    [gameState, socket, matchId, selectedSquare, color]
+    [gameState, isDemoMode, socket, matchId, selectedSquare, color]
   );
 
   const handleResign = useCallback(() => {
+    if (isDemoMode) {
+      setResult("demo ended");
+      setGameState("ended");
+      return;
+    }
     if (socket && matchId) {
       socket.emit("match:resign", { matchId });
     }
-  }, [socket, matchId]);
+  }, [isDemoMode, socket, matchId]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -279,26 +371,44 @@ export default function Play() {
   const bottomClock = boardOrientation === "white" ? whiteTime : blackTime;
   const topLabel = isSpectating
     ? `Black ${shortWallet(blackPlayer)}`
-    : shortWallet(opponent);
+    : isDemoMode
+      ? "Black Demo Bot"
+      : shortWallet(opponent);
   const bottomLabel = isSpectating
     ? `White ${shortWallet(whitePlayer)}`
-    : `You (${color})`;
+    : isDemoMode
+      ? "White You"
+      : `You (${color})`;
 
-  if (!connected && !isSpectatingRoute) {
+  if (!connected && !isSpectatingRoute && !isDemoMode) {
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
-        <div className="text-center">
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 pt-16">
+        <div className="w-full max-w-md text-center">
           <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-4">Connect Your Wallet</h1>
-          <p className="text-[#8A8F98] mb-8 max-w-md">
+          <p className="text-[#8A8F98] mb-8">
             Connect your Solana wallet to enter the ranked arena.
           </p>
           <button
             onClick={connect}
-            className="px-8 py-3 bg-[#14F195] text-black font-semibold rounded-full hover:bg-[#14F195]/90 transition-all"
+            className="w-full px-8 py-3 bg-[#14F195] text-black font-semibold rounded-full hover:bg-[#14F195]/90 transition-all"
           >
             Connect Wallet
           </button>
+          <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-[#666C76]">
+            <span className="h-px flex-1 bg-white/10" />
+            or
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <button
+            onClick={startDemo}
+            className="w-full rounded-full border border-white/15 px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+          >
+            Try Gameplay Demo
+          </button>
+          <p className="mx-auto mt-3 max-w-sm text-xs leading-5 text-[#8A8F98]">
+            Demo mode is local only. Play White against a quick bot without connecting a wallet.
+          </p>
         </div>
       </div>
     );
@@ -336,7 +446,7 @@ export default function Play() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white pt-16">
+    <div className="min-h-screen bg-[#050505] text-white pt-16" onPointerDownCapture={primeGameAudio}>
       <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6">
         <div className="grid lg:grid-cols-[280px_1fr_280px] gap-6">
           {/* Left Panel */}
@@ -349,13 +459,13 @@ export default function Play() {
                 <div>
                   <p className="text-sm font-medium">{isSpectating ? "Spectator" : "You"}</p>
                   <p className="text-xs text-[#8A8F98] font-mono">
-                    {walletAddress ? shortWallet(walletAddress, 6) : "Read-only view"}
+                    {walletAddress ? shortWallet(walletAddress, 6) : isDemoMode ? "Demo player" : "Read-only view"}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#8A8F98]">
                 <Shield className="w-3.5 h-3.5 text-[#14F195]" />
-                <span>{isSpectating ? "Watching live" : "Wallet connected"}</span>
+                <span>{isDemoMode ? "Demo mode" : isSpectating ? "Watching live" : "Wallet connected"}</span>
               </div>
             </div>
 
@@ -385,7 +495,7 @@ export default function Play() {
                   )}
                 </div>
               )}
-              {(gameState === "matched" || isLiveBoard) && (
+              {!isDemoMode && (gameState === "matched" || isLiveBoard) && (
                 <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
                   <Eye className="h-3.5 w-3.5 text-[#14F195]" />
                   <span>{spectatorCount} watching</span>
@@ -423,12 +533,16 @@ export default function Play() {
             {gameState === "ended" && !isSpectatingRoute && (
               <button
                 onClick={() => {
+                  if (isDemoMode) {
+                    void startDemo();
+                    return;
+                  }
                   setGameState("idle");
                   setSelectedSquare(null);
                   setLegalMoves([]);
                   setMoveHistory([]);
                   setResult(null);
-                  setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+                  setFen(START_FEN);
                 }}
                 className="w-full py-3 bg-[#14F195] text-black font-semibold rounded-xl hover:bg-[#14F195]/90 transition-all flex items-center justify-center gap-2"
               >
@@ -438,7 +552,7 @@ export default function Play() {
             )}
           </div>
 
-          {/* Center — Chess Board */}
+          {/* Center - Chess Board */}
           <div className="flex flex-col items-center">
             {isLiveBoard && (
               <div className="w-full max-w-[520px] flex justify-between items-center mb-2 px-1">
@@ -462,14 +576,59 @@ export default function Play() {
               </div>
             )}
 
-            <div className="w-full max-w-[520px] aspect-square rounded-xl overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50">
-              <Board3D
-                fen={fen}
-                orientation={boardOrientation}
-                onSquareClick={handleSquareClick}
-                selectedSquare={selectedSquare}
-                legalMoves={legalMoves}
-              />
+            {/* Board view toggle: 3D (rich) vs 2D (simple, low-memory) */}
+            <div className="w-full max-w-[920px] flex justify-end mb-2">
+              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] p-0.5 text-xs">
+                <button
+                  onClick={() => selectBoardMode("3d")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full transition-colors ${
+                    boardMode === "3d" ? "bg-[#14F195] text-black font-medium" : "text-[#8A8F98] hover:text-white"
+                  }`}
+                >
+                  <Box className="w-3.5 h-3.5" />
+                  3D
+                </button>
+                <button
+                  onClick={() => selectBoardMode("2d")}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full transition-colors ${
+                    boardMode === "2d" ? "bg-[#14F195] text-black font-medium" : "text-[#8A8F98] hover:text-white"
+                  }`}
+                  title="Simple, low-memory board"
+                >
+                  <Grid3x3 className="w-3.5 h-3.5" />
+                  2D
+                </button>
+              </div>
+            </div>
+
+            <div
+              className={
+                boardMode === "3d"
+                  ? "w-full max-w-[520px] aspect-square rounded-xl overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50 md:aspect-video md:max-w-[920px]"
+                  : "w-full max-w-[520px] aspect-square rounded-xl overflow-hidden"
+              }
+            >
+              {boardMode === "3d" ? (
+                <Board3D
+                  fen={fen}
+                  orientation={boardOrientation}
+                  onSquareClick={handleSquareClick}
+                  onPieceHover={handlePieceHover}
+                  selectedSquare={selectedSquare}
+                  legalMoves={legalMoves}
+                  interactive={gameState === "playing" && !isSpectating}
+                />
+              ) : (
+                <Board2D
+                  fen={fen}
+                  orientation={boardOrientation}
+                  onSquareClick={handleSquareClick}
+                  onPieceHover={handlePieceHover}
+                  selectedSquare={selectedSquare}
+                  legalMoves={legalMoves}
+                  interactive={gameState === "playing" && !isSpectating}
+                />
+              )}
             </div>
 
             {isLiveBoard && (
@@ -560,6 +719,15 @@ export default function Play() {
                 </div>
               </div>
             </div>
+
+            {!isDemoMode && (
+              <ChatPanel
+                walletAddress={walletAddress}
+                channel={matchId && isLiveBoard ? `match:${matchId}` : "lobby"}
+                title={matchId && isLiveBoard ? "Match Chat" : "Arena Chat"}
+                className="h-[420px]"
+              />
+            )}
           </div>
         </div>
       </div>

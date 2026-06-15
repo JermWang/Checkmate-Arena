@@ -92,6 +92,31 @@ export async function getUserByWallet(walletAddress: string) {
   });
 }
 
+/** Case-insensitive username lookup, excluding the caller's own wallet. */
+export async function isUsernameTaken(username: string, exceptWallet: string) {
+  const rows = await getDb()
+    .select({ wallet: chessPlayers.walletAddress })
+    .from(chessPlayers)
+    .where(sql`lower(${chessPlayers.username}) = lower(${username})`)
+    .limit(1);
+  return rows.length > 0 && rows[0].wallet !== exceptWallet;
+}
+
+export async function updateChessPlayerProfile(
+  walletAddress: string,
+  data: { username?: string | null; avatar?: string | null; bio?: string | null }
+) {
+  const patch: Record<string, unknown> = {};
+  if (data.username !== undefined) patch.username = data.username;
+  if (data.avatar !== undefined) patch.avatar = data.avatar;
+  if (data.bio !== undefined) patch.bio = data.bio;
+  if (Object.keys(patch).length === 0) return;
+  await getDb()
+    .update(chessPlayers)
+    .set(patch)
+    .where(eq(chessPlayers.walletAddress, walletAddress));
+}
+
 export async function updateUserRating(walletAddress: string, newRating: number) {
   await getDb()
     .update(chessPlayers)

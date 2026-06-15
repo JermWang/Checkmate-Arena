@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { useWallet } from "@/components/wallet/WalletProvider";
 import {
+  Check,
+  Copy,
   Swords,
   Shield,
   Clock,
@@ -12,6 +14,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { Hero3D } from "@/components/three/Hero3D";
+import { CHESS_MINT } from "@/config/wager";
 
 const steps = [
   {
@@ -52,7 +55,8 @@ const rewards = [
 ];
 
 export default function Home() {
-  const { connected, connect } = useWallet();
+  const { connected } = useWallet();
+  const [copiedContract, setCopiedContract] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -61,6 +65,25 @@ export default function Home() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const copyContractAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(CHESS_MINT);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = CHESS_MINT;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
+    setCopiedContract(true);
+    window.setTimeout(() => setCopiedContract(false), 1800);
+  };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-['Space_Grotesk',sans-serif]">
@@ -100,24 +123,14 @@ export default function Home() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
-              {connected ? (
-                <Link
-                  to="/play"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
-                >
-                  <Swords className="size-4" />
-                  Enter Arena
-                  <ChevronRight className="size-4" />
-                </Link>
-              ) : (
-                <button
-                  onClick={connect}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
-                >
-                  <Swords className="size-4" />
-                  Connect Wallet
-                </button>
-              )}
+              <Link
+                to="/play"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
+              >
+                <Swords className="size-4" />
+                Play
+                <ChevronRight className="size-4" />
+              </Link>
               <Link
                 to="/leaderboard"
                 className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/20 px-6 text-sm font-medium text-white transition-colors hover:bg-white/5"
@@ -125,6 +138,14 @@ export default function Home() {
                 <Trophy className="size-4" />
                 View Leaderboard
               </Link>
+              <button
+                type="button"
+                onClick={copyContractAddress}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-6 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
+              >
+                {copiedContract ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copiedContract ? "Copied" : "Copy Contract"}
+              </button>
             </div>
 
             <p className="mt-8 text-[11px] uppercase tracking-[0.26em] text-[#666C76]">

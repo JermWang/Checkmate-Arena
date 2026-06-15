@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { ConnectionProvider, WalletProvider as SolanaWalletProvider, useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { WalletModalProvider, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import type { Adapter, WalletError } from "@solana/wallet-adapter-base";
+import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
 
 interface WalletContextType {
@@ -13,15 +14,23 @@ interface WalletContextType {
   isEligible: boolean | null;
   tokenBalance: number;
   checkEligibility: () => Promise<boolean | null>;
+  isGuest: boolean;
 }
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
 const SOLANA_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_URL || clusterApiUrl("mainnet-beta");
+const ALLOW_GUEST = import.meta.env.VITE_ALLOW_GUEST_WALLET === "true";
+const GUEST_STORAGE_KEY = "checkmate.guestWallet";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const endpoint = useMemo(() => SOLANA_ENDPOINT, []);
-  const wallets = useMemo<Adapter[]>(() => [], []);
+  // Phantom & Solflare register via the Wallet Standard automatically; listing
+  // the adapters explicitly keeps legacy/in-app browsers working too.
+  const wallets = useMemo<Adapter[]>(
+    () => [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+    [],
+  );
 
   const handleWalletError = useCallback((error: WalletError) => {
     console.error("Solana wallet error:", error);
@@ -51,7 +60,18 @@ function WalletStateProvider({ children }: { children: ReactNode }) {
   const [isEligible, setIsEligible] = useState<boolean | null>(null);
   const [tokenBalance, setTokenBalance] = useState(0);
 
-  const walletAddress = publicKey?.toBase58() ?? null;
+  // ── Guest wallet (dev/testing only) ───────────────────────────
+  // Honor an existing dev guest session without making the public Connect
+  // Wallet button create one.
+  const [guestAddress, setGuestAddress] = useState<string | null>(() => {
+    if (!ALLOW_GUEST || typeof window === "undefined") return null;
+    return sessionStorage.getItem(GUEST_STORAGE_KEY);
+  });
+
+  const realWalletAddress = publicKey?.toBase58() ?? null;
+  const walletAddress = realWalletAddress ?? guestAddress;
+  const isGuest = !realWalletAddress && !!guestAddress;
+  const isConnected = connected || isGuest;
 
   const connect = useCallback(async () => {
     if (!wallet) {
@@ -68,8 +88,12 @@ function WalletStateProvider({ children }: { children: ReactNode }) {
   }, [connectSelectedWallet, setVisible, wallet]);
 
   const disconnect = useCallback(() => {
+    if (guestAddress) {
+      sessionStorage.removeItem(GUEST_STORAGE_KEY);
+      setGuestAddress(null);
+    }
     void disconnectSelectedWallet();
-  }, [disconnectSelectedWallet]);
+  }, [disconnectSelectedWallet, guestAddress]);
 
   const checkEligibilityForAddress = useCallback(async (address: string): Promise<boolean> => {
     try {
@@ -109,7 +133,7 @@ function WalletStateProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ walletAddress, connected, connecting, connect, disconnect, isEligible, tokenBalance, checkEligibility }}
+      value={{ walletAddress, connected: isConnected, connecting, connect, disconnect, isEligible, tokenBalance, checkEligibility, isGuest }}
     >
       {children}
     </WalletContext.Provider>
