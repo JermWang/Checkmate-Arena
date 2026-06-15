@@ -54,6 +54,11 @@ const rewards = [
   { rank: "8th-10th", percentage: "4-3%", description: "Even top 10 earns." },
 ];
 
+function shortContractAddress(value: string) {
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
 export default function Home() {
   const { connected } = useWallet();
   const [copiedContract, setCopiedContract] = useState(false);
@@ -140,10 +145,14 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={copyContractAddress}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-6 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
+                  aria-label={`Copy contract address ${CHESS_MINT}`}
+                  title={CHESS_MINT}
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-5 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
                 >
                   {copiedContract ? <Check className="size-4" /> : <Copy className="size-4" />}
-                  {copiedContract ? "Copied" : "Copy Contract"}
+                  <span className="font-mono">
+                    {copiedContract ? "Copied" : `Contract: ${shortContractAddress(CHESS_MINT)}`}
+                  </span>
                 </button>
               </div>
 
