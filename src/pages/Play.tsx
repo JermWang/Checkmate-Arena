@@ -22,6 +22,9 @@ export default function Play() {
   const spectateParam = searchParams.get("spectate");
   const spectateMatchId = spectateParam ? Number(spectateParam) : null;
   const isSpectatingRoute = Number.isFinite(spectateMatchId) && (spectateMatchId ?? 0) > 0;
+  const wagerParam = searchParams.get("match");
+  const wagerMatchId = wagerParam ? Number(wagerParam) : null;
+  const isWagerJoin = Number.isFinite(wagerMatchId) && (wagerMatchId ?? 0) > 0;
   const [gameState, setGameState] = useState<"idle" | "checking" | "ineligible" | "queue" | "matched" | "playing" | "spectating" | "ended">("idle");
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
   const [matchId, setMatchId] = useState<number | null>(null);
@@ -96,6 +99,10 @@ export default function Play() {
       }
       if (isSpectatingRoute && spectateMatchId) {
         newSocket.emit("spectate:join", { matchId: spectateMatchId });
+      }
+      // Auto-join an accepted wager match (both stakes already escrowed).
+      if (isWagerJoin && wagerMatchId && walletAddress) {
+        newSocket.emit("match:join_wager", { matchId: wagerMatchId, walletAddress });
       }
     });
 
@@ -199,7 +206,20 @@ export default function Play() {
       setSocket(null);
       newSocket.close();
     };
-  }, [walletAddress, isSpectatingRoute, spectateMatchId]);
+  }, [walletAddress, isSpectatingRoute, spectateMatchId, isWagerJoin, wagerMatchId]);
+
+  // Wager join: keep re-emitting until the match goes active and starts. Covers
+  // the creator who lands on /play?match= before the opponent has accepted.
+  useEffect(() => {
+    if (!socket || !isWagerJoin || !wagerMatchId || !walletAddress) return;
+    if (gameState === "playing" || gameState === "ended") return;
+    const tryJoin = () => {
+      if (socket.connected) socket.emit("match:join_wager", { matchId: wagerMatchId, walletAddress });
+    };
+    tryJoin();
+    const id = setInterval(tryJoin, 2500);
+    return () => clearInterval(id);
+  }, [socket, isWagerJoin, wagerMatchId, walletAddress, gameState]);
 
   const joinQueue = useCallback(() => {
     if (!socket || !walletAddress) return;

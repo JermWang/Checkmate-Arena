@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, and, desc, gt, gte, lte, sql } from "drizzle-orm";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { matches } from "../db/schema";
 import { env, getWagerReadiness } from "./lib/env";
+import { verifyDeposit, payout, getEscrowPublicKey } from "./lib/escrow";
 
 const ROOM_CODE_CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_CODE_LENGTH = 6;
@@ -14,6 +15,12 @@ const MIN_STAKE = 10;
 const MAX_STAKE = 1_000_000;
 const HOUSE_FEE_BPS_DEFAULT = 200;
 const CHESS_MINT = env.chessMint;
+const CHESS_DECIMALS = 6; // matches src/config/wager CHESS_DECIMALS
+
+/** Whole-token stake -> on-chain base units. */
+function baseUnits(wholeTokens: number): bigint {
+  return BigInt(Math.round(wholeTokens * 10 ** CHESS_DECIMALS));
+}
 
 function generateRoomCode(): string {
   let code = "";
@@ -49,38 +56,44 @@ function assertWagerReady() {
   }
 }
 
-async function assertConfirmedEscrowSignature(
+/** Verify a player's stake landed in the custodial escrow wallet. */
+async function assertDeposit(
   signature: string,
+  payerWallet: string,
+  stakeAmount: number,
   label: "create" | "accept"
 ) {
-  const connection = new Connection(env.solanaRpcUrl, "confirmed");
-  const status = await connection.getSignatureStatus(signature, {
-    searchTransactionHistory: true,
-  });
-
-  if (!status.value) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `${label} escrow transaction is not confirmed on-chain.`,
+  try {
+    await verifyDeposit({
+      signature,
+      payerWallet,
+      mint: CHESS_MINT,
+      amountBaseUnits: baseUnits(stakeAmount),
     });
-  }
-
-  if (status.value.err) {
+  } catch (err) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: `${label} escrow transaction failed on-chain.`,
-    });
-  }
-
-  if (!["confirmed", "finalized"].includes(status.value.confirmationStatus ?? "")) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `${label} escrow transaction has not reached confirmed status.`,
+      message: `${label} stake deposit could not be verified: ${(err as Error).message}`,
     });
   }
 }
 
 export const wagerRouter = createRouter({
+  /** Public config the client needs to build a stake deposit transfer. */
+  config: publicQuery.query(() => {
+    const readiness = getWagerReadiness();
+    return {
+      escrowAddress: getEscrowPublicKey()?.toBase58() ?? null,
+      mint: CHESS_MINT || null,
+      decimals: CHESS_DECIMALS,
+      houseFeeBps: HOUSE_FEE_BPS_DEFAULT,
+      minStake: MIN_STAKE,
+      maxStake: MAX_STAKE,
+      ready: readiness.ready,
+      blockers: readiness.blockers,
+    };
+  }),
+
   /**
    * Create a wagered challenge (public or private).
    * Returns the match row + a flag indicating the client should sign+submit
@@ -97,13 +110,12 @@ export const wagerRouter = createRouter({
         isPrivate: z.boolean(),
         allowSpectators: z.boolean().default(true),
         ranked: z.boolean().default(true),
-        escrowPda: solanaAddressSchema,
         escrowCreateSig: solanaSignatureSchema,
       })
     )
     .mutation(async ({ input }) => {
       assertWagerReady();
-      await assertConfirmedEscrowSignature(input.escrowCreateSig, "create");
+      await assertDeposit(input.escrowCreateSig, input.creatorWallet, input.stakeAmount, "create");
 
       const db = await getDb();
       const stakeMint = input.stakeMint ?? CHESS_MINT;
@@ -169,7 +181,7 @@ export const wagerRouter = createRouter({
           isPrivate: input.isPrivate,
           roomCode,
           allowSpectators: input.isPrivate ? input.allowSpectators : true,
-          escrowPda: input.escrowPda,
+          escrowPda: getEscrowPublicKey()?.toBase58() ?? null,
           rakeBps: HOUSE_FEE_BPS_DEFAULT,
           expiresAt,
         })
@@ -275,7 +287,6 @@ export const wagerRouter = createRouter({
     )
     .mutation(async ({ input }) => {
       assertWagerReady();
-      await assertConfirmedEscrowSignature(input.escrowAcceptSig, "accept");
 
       const db = await getDb();
       const [row] = await db
@@ -289,6 +300,9 @@ export const wagerRouter = createRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Match not open" });
       if (row.whiteWallet === input.challengerWallet)
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot accept own challenge" });
+
+      // Verify the challenger's stake deposit matches the creator's stake.
+      await assertDeposit(input.escrowAcceptSig, input.challengerWallet, row.stakeAmount, "accept");
 
       // Assign colors: simple coin flip if creator chose random; otherwise honor pref.
       const creatorWantsWhite = Math.random() < 0.5;
@@ -330,18 +344,30 @@ export const wagerRouter = createRouter({
       if (row.status !== "waiting")
         throw new TRPCError({ code: "BAD_REQUEST", message: "Match already started" });
 
+      // Refund the creator's escrowed stake from the custodial wallet.
+      let refundSig: string | null = null;
+      if (row.stakeAmount > 0 && row.stakeMint) {
+        try {
+          refundSig = await payout({
+            toWallet: row.whiteWallet,
+            mint: row.stakeMint,
+            amountBaseUnits: baseUnits(row.stakeAmount),
+            decimals: CHESS_DECIMALS,
+          });
+        } catch (err) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Refund failed: ${(err as Error).message}`,
+          });
+        }
+      }
+
       await db
         .update(matches)
-        .set({ status: "voided" })
+        .set({ status: "voided", escrowSettleSig: refundSig })
         .where(eq(matches.id, input.matchId));
 
-      return {
-        ok: true,
-        nextStep: {
-          kind: "sign_cancel_match" as const,
-          matchId: input.matchId,
-        },
-      };
+      return { ok: true, refundSig };
     }),
 
   /**

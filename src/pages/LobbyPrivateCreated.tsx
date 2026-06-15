@@ -1,21 +1,43 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { Copy, Clock, ShieldCheck, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/providers/trpc";
 import { ROOM_CODE_TTL_MS } from "@/config/wager";
 
 export default function LobbyPrivateCreated() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const code = (params.get("code") || "K7MQ3X").toUpperCase();
-  const stake = Number(params.get("stake") || 5000);
-  const tc = params.get("tc") || "5+3";
+  const { publicKey } = useSolanaWallet();
+  const code = (params.get("code") || "").toUpperCase();
+  const matchId = Number(params.get("match") || 0);
+
+  // Poll the open challenge: once it's accepted it drops out of byCode (returns
+  // null), which is our signal to send the creator into the match.
+  const challenge = trpc.wager.byCode.useQuery(
+    { code },
+    { enabled: code.length === 6, refetchInterval: 3000 }
+  );
+  const cancelMut = trpc.wager.cancel.useMutation();
+  const sawOpenRef = useRef(false);
+
+  const stake = challenge.data?.stakeAmount ?? Number(params.get("stake") || 0);
+  const tc = params.get("tc") || "—";
   const color = params.get("color") || "random";
-  const spectators = params.get("specs") === "true";
+  const spectators = challenge.data?.allowSpectators ?? params.get("specs") === "true";
   const ranked = params.get("ranked") === "true";
 
   const [remaining, setRemaining] = useState(ROOM_CODE_TTL_MS);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (challenge.data) sawOpenRef.current = true;
+    // Was open, now gone -> opponent accepted; jump into the board.
+    if (sawOpenRef.current && challenge.isFetched && !challenge.data && matchId > 0) {
+      navigate(`/play?match=${matchId}`);
+    }
+  }, [challenge.data, challenge.isFetched, matchId, navigate]);
 
   useEffect(() => {
     const t = setInterval(
@@ -24,6 +46,17 @@ export default function LobbyPrivateCreated() {
     );
     return () => clearInterval(t);
   }, []);
+
+  const onCancel = async () => {
+    if (matchId > 0 && publicKey) {
+      try {
+        await cancelMut.mutateAsync({ matchId, creatorWallet: publicKey.toBase58() });
+      } catch {
+        /* fall through to navigation regardless */
+      }
+    }
+    navigate("/lobby/private");
+  };
 
   const min = Math.floor(remaining / 60_000);
   const sec = Math.floor((remaining % 60_000) / 1000)
@@ -98,9 +131,10 @@ export default function LobbyPrivateCreated() {
               </Button>
               <Button
                 className="flex-1 bg-[#14F195] text-black hover:bg-[#14F195]/90"
-                onClick={() => navigate("/lobby/private")}
+                onClick={onCancel}
+                disabled={cancelMut.isPending}
               >
-                Cancel & refund
+                {cancelMut.isPending ? "Refunding…" : "Cancel & refund"}
               </Button>
             </div>
           </div>

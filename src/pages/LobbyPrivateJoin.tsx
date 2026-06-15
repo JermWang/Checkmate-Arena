@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router";
+import { useConnection, useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import { Clock, Coins, ShieldCheck, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trpc } from "@/providers/trpc";
+import { depositStake } from "@/lib/wagerDeposit";
+import { shortWallet } from "@/lib/profile";
 import {
   CAN_CREATE_REAL_WAGERS,
   WAGER_READINESS_BLOCKERS,
   payoutFromStake,
+  toBaseUnits,
 } from "@/config/wager";
 
 export default function LobbyPrivateJoin() {
@@ -13,19 +18,60 @@ export default function LobbyPrivateJoin() {
   const navigate = useNavigate();
   const code = (params.get("code") || "").toUpperCase();
 
-  // TODO: fetch real challenge by code via tRPC `wager.byCode`
-  const [stake] = useState(5000);
-  const [tc] = useState("5+3 blitz");
-  const [opponent] = useState({ handle: "creator", rating: 1750 });
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useSolanaWallet();
+  const challenge = trpc.wager.byCode.useQuery({ code }, { enabled: code.length === 6 });
+  const wagerConfig = trpc.wager.config.useQuery(undefined, { staleTime: 60_000 });
+  const acceptMut = trpc.wager.accept.useMutation();
+
+  const stake = challenge.data?.stakeAmount ?? 0;
+  const tc = "match settings";
+  const opponent = {
+    handle: challenge.data ? shortWallet(challenge.data.creatorWallet) : "creator",
+    rating: 0,
+  };
   const [accepting, setAccepting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const readinessMessage = WAGER_READINESS_BLOCKERS[0] ?? "";
 
-  const onAccept = () => {
-    if (!CAN_CREATE_REAL_WAGERS) return;
-
-    setAccepting(true);
-    // TODO: build & sign accept_match ix, then POST to wager.accept
-    setTimeout(() => navigate(`/play?match=${code.toLowerCase()}`), 1200);
+  const onAccept = async () => {
+    if (!CAN_CREATE_REAL_WAGERS || accepting) return;
+    setError(null);
+    const cfg = wagerConfig.data;
+    const row = challenge.data;
+    if (!row) {
+      setError("This challenge is no longer available (expired or already accepted).");
+      return;
+    }
+    if (!publicKey || !sendTransaction) {
+      setError("Connect a Solana wallet (Phantom/Solflare) to accept.");
+      return;
+    }
+    if (!cfg?.ready || !cfg.escrowAddress || !cfg.mint) {
+      setError(`Wagering isn't enabled on the server${cfg?.blockers?.[0] ? `: ${cfg.blockers[0]}` : "."}`);
+      return;
+    }
+    try {
+      setAccepting(true);
+      const sig = await depositStake({
+        connection,
+        owner: publicKey,
+        sendTransaction,
+        escrowAddress: cfg.escrowAddress,
+        mint: cfg.mint,
+        amountBaseUnits: toBaseUnits(row.stakeAmount),
+        decimals: cfg.decimals,
+      });
+      await acceptMut.mutateAsync({
+        matchId: row.id,
+        challengerWallet: publicKey.toBase58(),
+        escrowAcceptSig: sig,
+      });
+      navigate(`/play?match=${row.id}`);
+    } catch (e) {
+      setError((e as Error).message || "Failed to accept challenge.");
+      setAccepting(false);
+    }
   };
 
   return (
@@ -83,15 +129,20 @@ export default function LobbyPrivateJoin() {
 
           {!CAN_CREATE_REAL_WAGERS && (
             <div className="mt-4 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-xs leading-5 text-amber-200">
-              Live wagering is disabled until production escrow and Privy signing are fully configured.
-              Next blocker: {readinessMessage}
+              Live wagering is disabled until it is enabled in the server env. Next blocker: {readinessMessage}
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 rounded-lg border border-red-400/30 bg-red-400/[0.06] p-3 text-xs leading-5 text-red-300">
+              {error}
             </div>
           )}
 
           <Button
             size="lg"
             onClick={onAccept}
-            disabled={accepting || !code || !CAN_CREATE_REAL_WAGERS}
+            disabled={accepting || !code || !CAN_CREATE_REAL_WAGERS || !challenge.data}
             className="mt-4 w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {accepting ? (

@@ -132,6 +132,7 @@ export interface ClientToServerEvents {
   "chat:send": (data: { channel: string; text: string }) => void;
   "queue:join": (data: { walletAddress: string; rating: number }) => void;
   "queue:leave": () => void;
+  "match:join_wager": (data: { matchId: number; walletAddress: string }) => void;
   "match:move": (data: { matchId: number; from: string; to: string; promotion?: string }) => void;
   "match:resign": (data: { matchId: number }) => void;
   "match:draw_offer": (data: { matchId: number }) => void;

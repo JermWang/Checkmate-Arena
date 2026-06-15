@@ -17,6 +17,7 @@ import {
 } from "./queries/users";
 import { updateLeaderboardScore, getCurrentEpoch } from "./queries/leaderboard";
 import { createAdminFlag } from "./queries/admin";
+import { settleWager } from "./lib/wagerSettlement";
 import { GAME_CONFIG, getKFactor, getRatingBucket } from "../src/config/game";
 import type { ChatMessage, ClientToServerEvents, LiveMatchSummary, ServerToClientEvents } from "../contracts/types";
 
@@ -49,6 +50,9 @@ interface ActiveGame {
   currentTurn: "w" | "b";
   lastMoveTime: number;
   moveCount: number;
+  // For custodial wager matches: true once both players have joined the socket
+  // game and play has started (guards against double match:start on rejoin).
+  wagerStarted?: boolean;
   disconnectTimer?: ReturnType<typeof setTimeout>;
   timerInterval?: ReturnType<typeof setInterval>;
 }
@@ -469,6 +473,9 @@ async function endMatch(
         whiteRatingAfter: whiteNew,
         blackRatingAfter: blackNew,
       }), undefined);
+
+      // Settle wager payouts (no-op for free matches; idempotent).
+      await settleWager(matchId, winnerWallet);
     }
   })();
 
@@ -602,6 +609,78 @@ export function setupSocketIO(httpServer: HTTPServer) {
         if (idx > -1) queue.splice(idx, 1);
       }
       socket.emit("queue:left");
+    });
+
+    // Join an accepted wager match (both stakes already deposited + verified via
+    // the tRPC wager flow). Bridges the DB-backed wager match into the live game
+    // engine. Play starts once BOTH players have joined the socket.
+    socket.on("match:join_wager", async ({ matchId, walletAddress }) => {
+      const row = await safeDb("getMatchById(wager)", () => getMatchById(matchId), null);
+      if (!row) {
+        socket.emit("match:invalid_move", { reason: "Wager match not found" });
+        return;
+      }
+      if (row.matchMode !== "wager_public" && row.matchMode !== "wager_private") return;
+
+      const isWhite = walletAddress === row.whiteWallet;
+      const isBlack = walletAddress === row.blackWallet;
+      if (!isWhite && !isBlack) return; // not a participant
+
+      socketToWallet.set(socket.id, walletAddress);
+      walletToSocket.set(walletAddress, socket.id);
+      socketToMatch.set(socket.id, matchId);
+
+      // Not accepted yet — hold the creator's socket; the client re-emits until
+      // the opponent accepts and the match goes active.
+      if (row.status !== "active") return;
+
+      let game = activeGames.get(matchId);
+      if (!game) {
+        const whiteUser = await safeDb("findOrCreateUser(wW)", () => findOrCreateUser(row.whiteWallet), null);
+        const blackUser = await safeDb("findOrCreateUser(wB)", () => findOrCreateUser(row.blackWallet), null);
+        game = {
+          matchId,
+          chess: new Chess(),
+          whiteWallet: row.whiteWallet,
+          blackWallet: row.blackWallet,
+          whiteSocket: "",
+          blackSocket: "",
+          whiteTime: GAME_CONFIG.timeControlSeconds * 1000,
+          blackTime: GAME_CONFIG.timeControlSeconds * 1000,
+          whiteRating: whiteUser?.currentRating ?? row.whiteRatingBefore ?? 1000,
+          blackRating: blackUser?.currentRating ?? row.blackRatingBefore ?? 1000,
+          whiteStreak: whiteUser?.currentStreak ?? 0,
+          blackStreak: blackUser?.currentStreak ?? 0,
+          currentTurn: "w",
+          lastMoveTime: Date.now(),
+          moveCount: 0,
+        };
+        activeGames.set(matchId, game);
+      }
+
+      if (isWhite) game.whiteSocket = socket.id;
+      else game.blackSocket = socket.id;
+
+      socket.emit("match:found", {
+        matchId,
+        opponent: isWhite ? row.blackWallet : row.whiteWallet,
+        color: isWhite ? "white" : "black",
+      });
+
+      // Start once both seats are filled (and only once).
+      if (game.whiteSocket && game.blackSocket && !game.wagerStarted) {
+        game.wagerStarted = true;
+        game.lastMoveTime = Date.now();
+        io.to(game.whiteSocket).to(game.blackSocket).emit("match:start", {
+          matchId,
+          fen: game.chess.fen(),
+          white: game.whiteWallet,
+          black: game.blackWallet,
+          whiteTime: game.whiteTime,
+          blackTime: game.blackTime,
+        });
+        startGameTimer(matchId);
+      }
     });
 
     socket.on("spectate:list", () => {

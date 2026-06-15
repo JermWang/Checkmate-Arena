@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { useConnection, useWallet as useSolanaWallet } from "@solana/wallet-adapter-react";
 import {
   Dialog,
   DialogContent,
@@ -12,13 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Coins, Lock, ShieldCheck } from "lucide-react";
+import { trpc } from "@/providers/trpc";
+import { depositStake } from "@/lib/wagerDeposit";
 import {
   STAKE_TIERS,
   TIME_CONTROLS,
   type TimeControl,
   type ColorPref,
   payoutFromStake,
-  generateRoomCode,
+  toBaseUnits,
   CHESS_MINT,
   CAN_CREATE_REAL_WAGERS,
   WAGER_READINESS_BLOCKERS,
@@ -32,26 +35,66 @@ interface Props {
 
 export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
   const navigate = useNavigate();
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useSolanaWallet();
+  const wagerConfig = trpc.wager.config.useQuery(undefined, { staleTime: 60_000 });
+  const createMut = trpc.wager.create.useMutation();
   const [stake, setStake] = useState(1000);
   const [customStake, setCustomStake] = useState("1000");
   const [tc, setTc] = useState<TimeControl>("3+0");
   const [color, setColor] = useState<ColorPref>("random");
   const [spectators, setSpectators] = useState(mode === "public");
   const [ranked, setRanked] = useState(mode === "public");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const mintLabel = `${CHESS_MINT.slice(0, 4)}...${CHESS_MINT.slice(-4)}`;
   const readinessMessage = WAGER_READINESS_BLOCKERS[0] ?? "";
 
-  const handleCreate = () => {
-    if (!CAN_CREATE_REAL_WAGERS) return;
-
-    // TODO: call tRPC `wager.create` → build escrow tx → sign → submit
-    if (mode === "private") {
-      const code = generateRoomCode();
-      navigate(
-        `/lobby/private/created?code=${code}&stake=${stake}&tc=${tc}&color=${color}&specs=${spectators}&ranked=${ranked}`
-      );
-    } else {
+  const handleCreate = async () => {
+    if (!CAN_CREATE_REAL_WAGERS || busy) return;
+    setError(null);
+    const cfg = wagerConfig.data;
+    if (!publicKey || !sendTransaction) {
+      setError("Connect a Solana wallet (Phantom/Solflare) to wager.");
+      return;
+    }
+    if (!cfg?.ready || !cfg.escrowAddress || !cfg.mint) {
+      setError(`Wagering isn't enabled on the server${cfg?.blockers?.[0] ? `: ${cfg.blockers[0]}` : "."}`);
+      return;
+    }
+    try {
+      setBusy(true);
+      // 1) Lock the stake: sign + submit the SPL transfer into escrow.
+      const sig = await depositStake({
+        connection,
+        owner: publicKey,
+        sendTransaction,
+        escrowAddress: cfg.escrowAddress,
+        mint: cfg.mint,
+        amountBaseUnits: toBaseUnits(stake),
+        decimals: cfg.decimals,
+      });
+      // 2) Register the wager server-side (server verifies the deposit).
+      const res = await createMut.mutateAsync({
+        creatorWallet: publicKey.toBase58(),
+        stakeAmount: stake,
+        timeControl: tc,
+        colorPref: color,
+        isPrivate: mode === "private",
+        allowSpectators: spectators,
+        ranked,
+        escrowCreateSig: sig,
+      });
       onOpenChange(false);
+      if (mode === "private" && res.roomCode) {
+        navigate(`/lobby/private/created?code=${res.roomCode}&match=${res.matchId}`);
+      } else {
+        navigate(`/play?match=${res.matchId}`);
+      }
+    } catch (e) {
+      setError((e as Error).message || "Failed to create wager.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -206,17 +249,28 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
             </div>
           )}
 
+          {error && (
+            <div className="rounded-lg border border-red-400/30 bg-red-400/[0.06] p-3 text-xs leading-5 text-red-300">
+              {error}
+            </div>
+          )}
+
           <Button
             onClick={handleCreate}
-            disabled={!CAN_CREATE_REAL_WAGERS}
+            disabled={!CAN_CREATE_REAL_WAGERS || busy}
             className="w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
             size="lg"
           >
-            {CAN_CREATE_REAL_WAGERS
-              ? mode === "private"
-                ? "Lock stake & generate code"
-                : "Lock stake & post"
-              : "Live wager config required"}
+            {busy ? (
+              <>
+                <ShieldCheck className="w-4 h-4 animate-pulse" />
+                Locking stake…
+              </>
+            ) : CAN_CREATE_REAL_WAGERS ? (
+              mode === "private" ? "Lock stake & generate code" : "Lock stake & post"
+            ) : (
+              "Live wager config required"
+            )}
           </Button>
         </div>
       </DialogContent>
