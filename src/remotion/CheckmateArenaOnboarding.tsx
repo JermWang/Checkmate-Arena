@@ -13,7 +13,6 @@ import {
 
 const BRAND = "#E6B84F";
 const PURPLE = "#B8860B";
-const YELLOW = "#ffcf6b";
 const BLACK = "#050505";
 const MUTED = "#8A8F98";
 const BODY = "#A6ABB4";
@@ -517,38 +516,6 @@ function windowed(frame: number, start: number, end: number) {
   });
 }
 
-function findMesh(scene: THREE.Object3D, nodeName: string): THREE.Mesh {
-  const target = normalizeName(nodeName);
-  let found: THREE.Mesh | undefined;
-  scene.traverse((object) => {
-    if (!found && (object as THREE.Mesh).isMesh && normalizeName(object.name) === target) {
-      found = object as THREE.Mesh;
-    }
-  });
-  if (!found) throw new Error(`Mesh not found in chess set: ${nodeName}`);
-  return found;
-}
-
-function bakedGeometry(scene: THREE.Object3D, nodeName: string): THREE.BufferGeometry {
-  const mesh = findMesh(scene, nodeName);
-  mesh.updateWorldMatrix(true, false);
-  const geo = (mesh.geometry as THREE.BufferGeometry).clone();
-  geo.applyMatrix4(mesh.matrixWorld);
-  geo.computeBoundingBox();
-  const box = geo.boundingBox;
-  if (!box) return geo;
-  const cx = (box.min.x + box.max.x) / 2;
-  const cz = (box.min.z + box.max.z) / 2;
-  geo.translate(-cx, -box.min.y, -cz);
-  geo.computeBoundingBox();
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function normalizeName(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
 type BeatProps = {
   start: number;
   frame: number;
@@ -898,9 +865,6 @@ const styles: Record<string, CSSProperties> = {
   },
   beatLabelActive: {
     color: BRAND,
-  },
-  threeLayer: {
-    zIndex: 3,
   },
   pieceImageLayer: {
     overflow: "hidden",
