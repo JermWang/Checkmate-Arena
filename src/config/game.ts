@@ -3,8 +3,10 @@
 // ============================================================
 
 export const GAME_CONFIG = {
-  // Token gating
-  requiredTokenBalance: 0,
+  // Token gating — ranked requires holding this many $CHESS to participate.
+  // Enforcement is gated by ENABLE_TOKEN_GATE (off by default so pre-launch
+  // testing stays open); flip it on once $CHESS is live.
+  requiredTokenBalance: 10_000,
   tokenMint: "CM Token", // Placeholder — set via env in production
   tokenDecimals: 6,
 

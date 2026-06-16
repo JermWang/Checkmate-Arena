@@ -106,10 +106,16 @@ function WalletStateProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       const result = data.result?.data;
       if (result) {
-        setTokenBalance(result.tokenBalance);
+        setTokenBalance(result.tokenBalance ?? 0);
+        // Respect the server's verdict. Missing/undefined => treat as eligible
+        // (gate disabled or pre-launch) so we never lock players out by accident.
+        const eligible = result.isEligible !== false;
+        setIsEligible(eligible);
+        return eligible;
       }
     } catch (error) {
-      console.warn("Eligibility sync failed; token gate is currently disabled.", error);
+      // On any failure, fail OPEN — a flaky RPC/DB must not block ranked play.
+      console.warn("Eligibility sync failed; allowing play.", error);
     }
 
     setIsEligible(true);

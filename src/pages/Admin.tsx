@@ -27,7 +27,7 @@ export default function Admin() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
-        <div className="w-8 h-8 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -59,7 +59,7 @@ export default function Admin() {
       <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Shield className="w-8 h-8 text-[#14F195]" />
+          <Shield className="w-8 h-8 text-[#E6B84F]" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
             <p className="text-sm text-[#8A8F98]">Manage flags, review players, monitor activity</p>
@@ -70,7 +70,7 @@ export default function Admin() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <AdminStat label="Open Flags" value={flags?.length ?? 0} icon={<AlertTriangle className="w-5 h-5" />} color="text-yellow-400" />
           <AdminStat label="Critical" value={flags?.filter((f) => f.severity === "critical").length ?? 0} icon={<AlertTriangle className="w-5 h-5" />} color="text-red-400" />
-          <AdminStat label="Reviewed" value={actions?.filter((a) => a.actionType === "resolve_flag").length ?? 0} icon={<CheckCircle className="w-5 h-5" />} color="text-[#14F195]" />
+          <AdminStat label="Reviewed" value={actions?.filter((a) => a.actionType === "resolve_flag").length ?? 0} icon={<CheckCircle className="w-5 h-5" />} color="text-[#E6B84F]" />
           <AdminStat label="Total Actions" value={actions?.length ?? 0} icon={<Activity className="w-5 h-5" />} color="text-blue-400" />
         </div>
 
@@ -79,7 +79,7 @@ export default function Admin() {
           <button
             onClick={() => setActiveTab("flags")}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-              activeTab === "flags" ? "bg-[#14F195] text-black" : "border border-white/10 text-[#8A8F98] hover:border-white/20"
+              activeTab === "flags" ? "bg-[#E6B84F] text-black" : "border border-white/10 text-[#8A8F98] hover:border-white/20"
             }`}
           >
             Flagged Players
@@ -87,7 +87,7 @@ export default function Admin() {
           <button
             onClick={() => setActiveTab("actions")}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-              activeTab === "actions" ? "bg-[#14F195] text-black" : "border border-white/10 text-[#8A8F98] hover:border-white/20"
+              activeTab === "actions" ? "bg-[#E6B84F] text-black" : "border border-white/10 text-[#8A8F98] hover:border-white/20"
             }`}
           >
             Audit Log
@@ -107,7 +107,7 @@ export default function Admin() {
 
             {flagsLoading ? (
               <div className="px-6 py-8 text-center text-[#8A8F98]">
-                <div className="w-6 h-6 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <div className="w-6 h-6 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 Loading flags...
               </div>
             ) : flags && flags.length > 0 ? (
@@ -128,7 +128,7 @@ export default function Admin() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => resolveFlag.mutate({ flagId: flag.id, status: "dismissed" })}
-                        className="p-1.5 rounded-lg hover:bg-white/5 text-[#8A8F98] hover:text-[#14F195] transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-white/5 text-[#8A8F98] hover:text-[#E6B84F] transition-colors"
                         title="Dismiss"
                       >
                         <XCircle className="w-4 h-4" />

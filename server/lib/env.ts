@@ -19,6 +19,10 @@ export const env = {
   solanaRpcUrl: process.env.SOLANA_RPC_URL || process.env.VITE_SOLANA_RPC_URL || "",
   realWagersEnabled: process.env.ENABLE_REAL_WAGERS === "true" ||
     process.env.VITE_ENABLE_REAL_WAGERS === "true",
+  // Enforce the $CHESS holding requirement for ranked play. Off by default so
+  // the arena stays open before the token launches; flip on once $CHESS is live.
+  tokenGateEnabled: process.env.ENABLE_TOKEN_GATE === "true" ||
+    process.env.VITE_ENABLE_TOKEN_GATE === "true",
   wagerEscrowTransactionsEnabled:
     process.env.WAGER_ESCROW_TRANSACTIONS_ENABLED === "true" ||
     process.env.VITE_WAGER_ESCROW_TRANSACTIONS_ENABLED === "true",

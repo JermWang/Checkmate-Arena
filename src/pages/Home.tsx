@@ -15,31 +15,32 @@ import {
 } from "lucide-react";
 import { Hero3D } from "@/components/three/Hero3D";
 import { CHESS_MINT } from "@/config/wager";
+import { useArenaStats } from "@/providers/arenaStats";
 
 const steps = [
   {
     number: "01",
     title: "Connect Wallet",
     description: "Connect a real Solana wallet to enter the arena.",
-    icon: <Shield className="size-5 text-[#14F195]" />,
+    icon: <Shield className="size-5 text-[#E6B84F]" />,
   },
   {
     number: "02",
-    title: "Enter Queue",
-    description: "Connect your wallet and join the ranked matchmaking queue.",
-    icon: <Swords className="size-5 text-[#14F195]" />,
+    title: "Hold 10K $CHESS",
+    description: "Holding 10,000 $CHESS unlocks ranked, then join the matchmaking queue.",
+    icon: <Coins className="size-5 text-[#E6B84F]" />,
   },
   {
     number: "03",
     title: "Win Matches",
     description: "Play rated 5-minute games. Win to climb the daily leaderboard.",
-    icon: <Zap className="size-5 text-[#14F195]" />,
+    icon: <Zap className="size-5 text-[#E6B84F]" />,
   },
   {
     number: "04",
     title: "Earn Rewards",
     description: "Top 10 players split 50% of creator fees every 24 hours.",
-    icon: <Clock className="size-5 text-[#14F195]" />,
+    icon: <Clock className="size-5 text-[#E6B84F]" />,
   },
 ];
 
@@ -61,6 +62,7 @@ function shortContractAddress(value: string) {
 
 export default function Home() {
   const { connected } = useWallet();
+  const arena = useArenaStats();
   const [copiedContract, setCopiedContract] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -102,14 +104,14 @@ export default function Home() {
               className="relative order-1 mx-auto aspect-square w-full max-w-[230px] sm:max-w-[280px] md:max-w-[330px] lg:order-2 lg:max-w-[430px]"
               style={{ transform: `translateY(${Math.min(scrollY * 0.035, 18)}px)` }}
             >
-              <div className="absolute -inset-8 rounded-full bg-[#14F195]/[0.18] blur-[72px]" />
-              <div className="absolute inset-10 rounded-full bg-[#7c4dff]/[0.22] blur-[58px]" />
+              <div className="absolute inset-2 rounded-full bg-[#E6B84F]/[0.11] blur-[64px]" />
+              <div className="absolute inset-x-10 top-10 bottom-16 rounded-full bg-[#B8860B]/[0.13] blur-[44px]" />
               <Hero3D
                 pieceKey="wN"
                 png="/hero-knight.png"
                 alt="Chess Knight"
                 pieceHeight={2.75}
-                className="relative size-full drop-shadow-[0_30px_92px_rgba(20,241,149,0.34)]"
+                className="relative size-full drop-shadow-[0_30px_92px_rgba(230, 184, 79,0.34)]"
               />
             </div>
 
@@ -119,20 +121,20 @@ export default function Home() {
               </p>
               <h1 className="text-4xl font-bold leading-[0.96] tracking-normal sm:text-5xl md:text-6xl lg:text-7xl">
                 Enter the
-                <span className="block text-[#14F195]">King of Games</span>
+                <span className="block text-[#E6B84F]">King of Games</span>
               </h1>
               <p className="mx-auto mt-5 max-w-[560px] text-base leading-7 text-[#A6ABB4] sm:text-lg lg:mx-0">
-                Connect your wallet to enter ranked matchmaking, chase the daily leaderboard,
+                Hold 10,000 $CHESS to enter ranked matchmaking, chase the daily leaderboard,
                 or opt into escrow-backed $CHESS wagers.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
                 <Link
                   to="/play"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#14F195] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#14F195]/90"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#E6B84F] px-6 text-sm font-semibold text-black transition-colors hover:bg-[#E6B84F]/90"
                 >
                   <Swords className="size-4" />
-                  Play
+                  Play Ranked
                   <ChevronRight className="size-4" />
                 </Link>
                 <Link
@@ -147,7 +149,7 @@ export default function Home() {
                   onClick={copyContractAddress}
                   aria-label={`Copy contract address ${CHESS_MINT}`}
                   title={CHESS_MINT}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195]/35 px-5 text-sm font-medium text-[#14F195] transition-colors hover:bg-[#14F195]/10"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#E6B84F]/35 px-5 text-sm font-medium text-[#E6B84F] transition-colors hover:bg-[#E6B84F]/10"
                 >
                   {copiedContract ? <Check className="size-4" /> : <Copy className="size-4" />}
                   <span className="font-mono">
@@ -155,6 +157,30 @@ export default function Home() {
                   </span>
                 </button>
               </div>
+
+              <Link
+                to="/play"
+                className="mt-6 inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs text-[#A6ABB4] transition-colors hover:border-[#E6B84F]/30 hover:text-white"
+              >
+                <span className="relative flex h-2 w-2">
+                  {arena.live && (
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E6B84F] opacity-70" />
+                  )}
+                  <span className={`relative inline-flex h-2 w-2 rounded-full ${arena.live ? "bg-[#E6B84F]" : "bg-[#8A8F98]"}`} />
+                </span>
+                <span className="font-mono tabular-nums text-white">{arena.inQueue}</span>
+                in queue
+                <span className="text-white/15">·</span>
+                <span className="font-mono tabular-nums text-white">{arena.online}</span>
+                online
+                {arena.liveMatches > 0 && (
+                  <>
+                    <span className="text-white/15">·</span>
+                    <span className="font-mono tabular-nums text-white">{arena.liveMatches}</span>
+                    live
+                  </>
+                )}
+              </Link>
 
               <p className="mt-8 text-[11px] uppercase tracking-[0.26em] text-[#666C76]">
                 Powered by Solana
@@ -192,7 +218,7 @@ export default function Home() {
         <PieceFeature
           label="Leverage"
           title="Skill is your edge."
-          copy="Play ranked for free, then step into public challenges or private rooms when you want stakes on the board."
+          copy="Hold $CHESS to play ranked, then step into public challenges or private rooms when you want bigger stakes on the board."
           pieceKey="wQ"
           png="/queen-piece.png"
           alt="Queen Piece"
@@ -217,10 +243,10 @@ export default function Home() {
 
           <div className="mt-10 overflow-hidden rounded-full bg-white/10">
             <div className="flex h-3">
-              <div className="bg-[#14F195]" style={{ width: "25%" }} />
-              <div className="bg-[#10c77a]" style={{ width: "18%" }} />
+              <div className="bg-[#E6B84F]" style={{ width: "25%" }} />
+              <div className="bg-[#C9A227]" style={{ width: "18%" }} />
               <div className="bg-[#27aee4]" style={{ width: "14%" }} />
-              <div className="bg-[#7c4dff]" style={{ width: "10%" }} />
+              <div className="bg-[#B8860B]" style={{ width: "10%" }} />
               <div className="bg-[#9ca3af]" style={{ width: "33%" }} />
             </div>
           </div>
@@ -237,20 +263,20 @@ export default function Home() {
             <SectionHeader
               eyebrow="Opt-in $CHESS"
               title="Or play for keeps."
-              description="Ranked is free. If you want stakes on the board, the lobby has public challenges and private rooms. Pots settle on-chain in $CHESS."
+              description="Ranked is unlocked by holding 10,000 $CHESS. If you want stakes on the board, the lobby has public challenges and private rooms. Pots settle on-chain in $CHESS."
             />
 
             <div className="mt-10 grid gap-4 md:grid-cols-2">
               <ModeCard
                 to="/lobby"
-                icon={<Coins className="size-7 text-[#14F195]" />}
+                icon={<Coins className="size-7 text-[#E6B84F]" />}
                 title="Public lobby"
                 description="Browse open challenges. Snap-to-tier stakes from 100 up to 100,000 $CHESS. Accept any challenge to lock matching stakes."
                 action="Open lobby"
               />
               <ModeCard
                 to="/lobby/private"
-                icon={<Lock className="size-7 text-[#14F195]" />}
+                icon={<Lock className="size-7 text-[#E6B84F]" />}
                 title="Private room"
                 description="Generate a single-use 6-character code for friends, streams, and brackets. No public listing, 15-minute expiry."
                 action="Create room"
@@ -266,7 +292,7 @@ export default function Home() {
 
         <section className="landing-section landing-panel px-4 py-16 sm:px-6 md:py-20 lg:px-8">
           <div className="mx-auto max-w-[760px] text-center">
-            <Shield className="mx-auto mb-5 size-10 text-[#14F195]" />
+            <Shield className="mx-auto mb-5 size-10 text-[#E6B84F]" />
             <h2 className="text-3xl font-bold leading-tight tracking-normal md:text-4xl">
               Server-Validated. Anti-Cheat Protected.
             </h2>
@@ -276,7 +302,7 @@ export default function Home() {
             </p>
             <Link
               to="/play"
-              className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#14F195] px-6 text-sm font-semibold text-[#14F195] transition-colors hover:bg-[#14F195] hover:text-black"
+              className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[#E6B84F] px-6 text-sm font-semibold text-[#E6B84F] transition-colors hover:bg-[#E6B84F] hover:text-black"
             >
               <Swords className="size-4" />
               {connected ? "Play Now" : "Join the Arena"}
@@ -287,13 +313,13 @@ export default function Home() {
         <footer className="landing-section landing-panel px-4 py-10 sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1180px] flex-col items-center justify-between gap-3 text-center md:flex-row md:text-left">
             <div className="flex items-center gap-2">
-              <Swords className="size-4 text-[#14F195]" />
+              <Swords className="size-4 text-[#E6B84F]" />
               <span className="text-xs uppercase tracking-[0.24em] text-[#8A8F98]">
                 Checkmate Arena
               </span>
             </div>
             <p className="text-xs text-[#8A8F98]">
-              Ranked chess on Solana. Ranked is free; wagering is opt-in.
+              Ranked chess on Solana. Hold 10,000 $CHESS to play ranked; wagering is opt-in.
             </p>
           </div>
         </footer>
@@ -340,7 +366,7 @@ function StepCard({
   icon: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-white/5 bg-white/[0.025] p-5 transition-colors hover:border-[#14F195]/20 hover:bg-white/[0.05]">
+    <div className="rounded-lg border border-white/5 bg-white/[0.025] p-5 transition-colors hover:border-[#E6B84F]/20 hover:bg-white/[0.05]">
       <div className="mb-4 flex items-center justify-between">
         <span className="font-mono text-xs text-[#8A8F98]">{number}</span>
         <div className="rounded-md bg-white/5 p-2">{icon}</div>
@@ -382,8 +408,8 @@ function PieceFeature({
 
   const piece = (
     <div className="relative mx-auto aspect-[4/5] w-full max-w-[280px] sm:max-w-[330px] lg:max-w-[390px]">
-      <div className="absolute inset-10 rounded-full bg-[#14F195]/10 blur-3xl" />
-      <div className="absolute inset-x-4 top-8 bottom-12 rounded-full bg-[#7c4dff]/[0.12] blur-[58px]" />
+      <div className="absolute inset-x-6 top-10 bottom-10 rounded-full bg-[#E6B84F]/[0.07] blur-[56px]" />
+      <div className="absolute inset-x-10 top-12 bottom-16 rounded-full bg-[#B8860B]/[0.09] blur-[44px]" />
       <div
         className="relative size-full"
         style={{ transform: `translateY(${-Math.min(offset * 0.012, 18)}px)` }}
@@ -393,7 +419,7 @@ function PieceFeature({
         png={png}
         alt={alt}
         pieceHeight={pieceKey.endsWith("Q") ? 2.3 : 2.55}
-        className="size-full drop-shadow-[0_24px_70px_rgba(20,241,149,0.16)]"
+        className="size-full drop-shadow-[0_24px_70px_rgba(230, 184, 79,0.16)]"
       />
       </div>
     </div>
@@ -430,9 +456,9 @@ function RewardCard({
   highlight?: boolean;
 }) {
   return (
-    <div className={`rounded-lg border p-5 transition-colors ${highlight ? "border-[#14F195]/45 bg-[#14F195]/10" : "border-white/5 bg-white/[0.025] hover:border-[#14F195]/25 hover:bg-white/[0.05]"}`}>
+    <div className={`rounded-lg border p-5 transition-colors ${highlight ? "border-[#E6B84F]/45 bg-[#E6B84F]/10" : "border-white/5 bg-white/[0.025] hover:border-[#E6B84F]/25 hover:bg-white/[0.05]"}`}>
       <div className="mb-2 flex items-baseline justify-between gap-4">
-        <span className={`text-xl font-bold ${highlight ? "text-[#14F195]" : "text-white"}`}>{rank}</span>
+        <span className={`text-xl font-bold ${highlight ? "text-[#E6B84F]" : "text-white"}`}>{rank}</span>
         <span className="text-2xl font-bold">{percentage}</span>
       </div>
       <p className="text-sm leading-6 text-[#A6ABB4]">{description}</p>
@@ -456,12 +482,12 @@ function ModeCard({
   return (
     <Link
       to={to}
-      className="group rounded-lg border border-white/5 bg-white/[0.025] p-6 transition-colors hover:border-[#14F195]/30 hover:bg-white/[0.05]"
+      className="group rounded-lg border border-white/5 bg-white/[0.025] p-6 transition-colors hover:border-[#E6B84F]/30 hover:bg-white/[0.05]"
     >
       {icon}
       <h3 className="mt-4 text-xl font-semibold">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-[#A6ABB4]">{description}</p>
-      <span className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#14F195] transition-all group-hover:gap-2">
+      <span className="mt-5 inline-flex items-center gap-1.5 text-xs text-[#E6B84F] transition-all group-hover:gap-2">
         {action}
         <ChevronRight className="size-3" />
       </span>

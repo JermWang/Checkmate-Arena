@@ -104,9 +104,9 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             {mode === "private" ? (
-              <Lock className="w-4 h-4 text-[#14F195]" />
+              <Lock className="w-4 h-4 text-[#E6B84F]" />
             ) : (
-              <Coins className="w-4 h-4 text-[#14F195]" />
+              <Coins className="w-4 h-4 text-[#E6B84F]" />
             )}
             {mode === "private" ? "Create private room" : "Post public challenge"}
           </DialogTitle>
@@ -133,7 +133,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
                   }}
                   className={`rounded-full border px-3 py-1 text-xs font-mono transition-all ${
                     stake === t
-                      ? "border-[#14F195]/60 bg-[#14F195]/15 text-[#14F195]"
+                      ? "border-[#E6B84F]/60 bg-[#E6B84F]/15 text-[#E6B84F]"
                       : "border-white/10 bg-white/[0.02] text-[#8A8F98] hover:border-white/30"
                   }`}
                 >
@@ -152,7 +152,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
                 className="font-mono bg-white/[0.02] border-white/10"
                 placeholder="Custom"
               />
-              <span className="text-xs font-mono text-[#14F195] whitespace-nowrap">
+              <span className="text-xs font-mono text-[#E6B84F] whitespace-nowrap">
                 $CHESS
               </span>
             </div>
@@ -171,7 +171,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
                   onClick={() => setTc(t)}
                   className={`rounded-md border px-2 py-2 text-xs font-mono transition-all ${
                     tc === t
-                      ? "border-[#14F195]/60 bg-[#14F195]/15 text-[#14F195]"
+                      ? "border-[#E6B84F]/60 bg-[#E6B84F]/15 text-[#E6B84F]"
                       : "border-white/10 bg-white/[0.02] text-[#8A8F98] hover:border-white/30"
                   }`}
                 >
@@ -194,7 +194,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
                   onClick={() => setColor(c)}
                   className={`rounded-md border px-2 py-2 text-xs capitalize transition-all ${
                     color === c
-                      ? "border-[#14F195]/60 bg-[#14F195]/15 text-[#14F195]"
+                      ? "border-[#E6B84F]/60 bg-[#E6B84F]/15 text-[#E6B84F]"
                       : "border-white/10 bg-white/[0.02] text-[#8A8F98] hover:border-white/30"
                   }`}
                 >
@@ -225,16 +225,16 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
           )}
 
           {/* Payout summary */}
-          <div className="rounded-lg border border-[#14F195]/25 bg-[#14F195]/[0.05] p-3 font-mono text-xs text-[#14F195]">
+          <div className="rounded-lg border border-[#E6B84F]/25 bg-[#E6B84F]/[0.05] p-3 font-mono text-xs text-[#E6B84F]">
             <div className="flex items-center gap-1.5 mb-1">
               <ShieldCheck className="w-3 h-3" />
               Escrow summary
             </div>
             <div className="text-[#8A8F98]">
-              You lock <span className="text-[#14F195]">{stake.toLocaleString()} $CHESS</span>.
+              You lock <span className="text-[#E6B84F]">{stake.toLocaleString()} $CHESS</span>.
               Opponent matches it.
               Winner takes{" "}
-              <span className="text-[#14F195]">
+              <span className="text-[#E6B84F]">
                 {payoutFromStake(stake).toLocaleString()}
               </span>{" "}
               ({" "}<span className="text-white">{(stake * 2).toLocaleString()}</span> pot · 2% house fee){" "}.
@@ -258,7 +258,7 @@ export function CreateWagerDialog({ open, onOpenChange, mode }: Props) {
           <Button
             onClick={handleCreate}
             disabled={!CAN_CREATE_REAL_WAGERS || busy}
-            className="w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
+            className="w-full bg-[#E6B84F] text-black hover:bg-[#E6B84F]/90 disabled:cursor-not-allowed disabled:opacity-45"
             size="lg"
           >
             {busy ? (

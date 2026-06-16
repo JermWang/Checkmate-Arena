@@ -80,10 +80,10 @@ export function ChatPanel({
   return (
     <div className={`flex flex-col rounded-xl border border-white/5 bg-white/[0.02] ${className}`}>
       <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
-        <MessageSquare className="w-4 h-4 text-[#14F195]" />
+        <MessageSquare className="w-4 h-4 text-[#E6B84F]" />
         <h3 className="text-sm font-medium">{title}</h3>
         <span className="ml-auto inline-flex items-center gap-1.5 text-[10px] text-[#8A8F98]">
-          <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-[#14F195]" : "bg-white/30"}`} />
+          <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-[#E6B84F]" : "bg-white/30"}`} />
           {connected ? "live" : "offline"}
         </span>
       </div>
@@ -103,7 +103,7 @@ export function ChatPanel({
                 />
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className={`text-xs font-medium truncate ${mine ? "text-[#14F195]" : "text-white/90"}`}>
+                    <span className={`text-xs font-medium truncate ${mine ? "text-[#E6B84F]" : "text-white/90"}`}>
                       {displayName(m.username, m.walletAddress)}
                     </span>
                     <span className="text-[10px] text-[#8A8F98] shrink-0">
@@ -129,12 +129,12 @@ export function ChatPanel({
             disabled={!canChat}
             maxLength={300}
             placeholder={placeholder}
-            className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#8A8F98] focus:outline-none focus:border-[#14F195]/40 disabled:opacity-50"
+            className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#8A8F98] focus:outline-none focus:border-[#E6B84F]/40 disabled:opacity-50"
           />
           <button
             onClick={send}
             disabled={!canChat || !input.trim()}
-            className="p-2 rounded-lg bg-[#14F195] text-black disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#14F195]/90 transition-colors"
+            className="p-2 rounded-lg bg-[#E6B84F] text-black disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#E6B84F]/90 transition-colors"
             aria-label="Send message"
           >
             <Send className="w-4 h-4" />

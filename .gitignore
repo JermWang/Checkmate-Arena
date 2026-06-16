@@ -37,6 +37,7 @@ dist-ssr
 dist/
 build/
 target/
+out/
 programs/match-escrow/target/
 
 # Local Solana keypairs

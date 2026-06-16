@@ -19,7 +19,15 @@ export default defineConfig({
       "@contracts": path.resolve(__dirname, "./contracts"),
       "@db": path.resolve(__dirname, "./db"),
       "db": path.resolve(__dirname, "./db"),
+      // Solana web3.js + the wallet adapters expect a Node-style `Buffer`. Vite
+      // externalizes the built-in `buffer` module for the browser, leaving the
+      // import undefined and crashing the wallet adapters at startup. Point it at
+      // the installed `buffer` polyfill so the main.tsx Buffer shim actually works.
+      "buffer": "buffer/",
     },
+  },
+  optimizeDeps: {
+    include: ["buffer"],
   },
   envDir: path.resolve(__dirname),
   build: {

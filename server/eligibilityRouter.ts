@@ -4,17 +4,27 @@ import { findOrCreateUser } from "./queries/users";
 import { saveTokenSnapshot, getLatestTokenSnapshot } from "./queries/rewards";
 import { GAME_CONFIG } from "../src/config/game";
 import { env } from "./lib/env";
+import { getTokenUiBalance } from "./lib/tokenBalance";
 
 export const eligibilityRouter = createRouter({
   check: publicQuery
     .input(z.object({ walletAddress: z.string().min(32).max(44) }))
     .mutation(async ({ input }) => {
-      const balance = 0;
-      const isEligible = true;
+      const mint = env.chessMint || GAME_CONFIG.tokenMint;
+      const required = GAME_CONFIG.requiredTokenBalance;
+
+      // Gate OFF (default, pre-launch): arena stays open and we don't bother
+      // hitting RPC. Gate ON: require holding `required` $CHESS to play ranked.
+      let balance = 0;
+      let isEligible = true;
+      if (env.tokenGateEnabled) {
+        balance = await getTokenUiBalance(input.walletAddress, mint);
+        isEligible = balance >= required;
+      }
 
       await saveTokenSnapshot({
         walletAddress: input.walletAddress,
-        tokenMint: env.chessMint || GAME_CONFIG.tokenMint,
+        tokenMint: mint,
         tokenBalance: balance.toString(),
         isEligible,
       });
@@ -25,7 +35,8 @@ export const eligibilityRouter = createRouter({
         walletAddress: input.walletAddress,
         tokenBalance: balance,
         isEligible,
-        requiredBalance: GAME_CONFIG.requiredTokenBalance,
+        requiredBalance: required,
+        gateEnabled: env.tokenGateEnabled,
       };
     }),
 

@@ -27,14 +27,14 @@ export default function LobbyPrivate() {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
         <div className="text-center max-w-md mx-auto px-6">
-          <Lock className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
+          <Lock className="w-16 h-16 text-[#E6B84F] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-3">Private rooms need a wallet</h1>
           <p className="text-[#8A8F98] mb-6">
             Connect to create or join a private $CHESS wager. No minimum token balance is required.
           </p>
           <Button
             onClick={connect}
-            className="bg-[#14F195] text-black hover:bg-[#14F195]/90"
+            className="bg-[#E6B84F] text-black hover:bg-[#E6B84F]/90"
           >
             Connect Wallet
           </Button>
@@ -54,7 +54,7 @@ export default function LobbyPrivate() {
         </Link>
 
         <div className="flex items-center gap-3 mb-2">
-          <Lock className="w-5 h-5 text-[#14F195]" />
+          <Lock className="w-5 h-5 text-[#E6B84F]" />
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
             Private room
           </h1>
@@ -66,7 +66,7 @@ export default function LobbyPrivate() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Create */}
           <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-            <Plus className="w-5 h-5 text-[#14F195] mb-3" />
+            <Plus className="w-5 h-5 text-[#E6B84F] mb-3" />
             <h2 className="text-lg font-semibold">Create a room</h2>
             <p className="text-sm text-[#8A8F98] mt-1 mb-5">
               Set the $CHESS stake and match terms, then get a code to share.
@@ -74,7 +74,7 @@ export default function LobbyPrivate() {
             <Button
               onClick={() => setCreateOpen(true)}
               size="lg"
-              className="w-full bg-[#14F195] text-black hover:bg-[#14F195]/90"
+              className="w-full bg-[#E6B84F] text-black hover:bg-[#E6B84F]/90"
             >
               New private room
             </Button>

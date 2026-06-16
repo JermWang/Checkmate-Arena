@@ -49,7 +49,7 @@ export default function Profile() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
-        <div className="w-8 h-8 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -62,11 +62,11 @@ export default function Profile() {
           <h1 className="text-xl font-semibold mb-2">Player Not Found</h1>
           <p className="text-[#8A8F98] mb-4">No player found with this wallet address.</p>
           {isOwner ? (
-            <button onClick={() => setEditing(true)} className="text-[#14F195] hover:underline">
+            <button onClick={() => setEditing(true)} className="text-[#E6B84F] hover:underline">
               Create your profile
             </button>
           ) : (
-            <Link to="/" className="text-[#14F195] hover:underline">Back to Arena</Link>
+            <Link to="/" className="text-[#E6B84F] hover:underline">Back to Arena</Link>
           )}
         </div>
         {editing && wallet && (
@@ -107,7 +107,7 @@ export default function Profile() {
             </div>
             <div className="text-right shrink-0">
               <span className="text-xs text-[#8A8F98]">Rating</span>
-              <p className="text-3xl font-bold text-[#14F195]">{profile.currentRating}</p>
+              <p className="text-3xl font-bold text-[#E6B84F]">{profile.currentRating}</p>
             </div>
             {isOwner && (
               <button
@@ -124,16 +124,16 @@ export default function Profile() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <StatCard label="Total Games" value={profile.totalGames.toString()} icon={<Swords className="w-4 h-4" />} />
-          <StatCard label="Win Rate" value={`${winRate}%`} icon={<Target className="w-4 h-4" />} iconColor="text-[#14F195]" />
+          <StatCard label="Win Rate" value={`${winRate}%`} icon={<Target className="w-4 h-4" />} iconColor="text-[#E6B84F]" />
           <StatCard label="Streak" value={profile.currentStreak.toString()} icon={<Flame className="w-4 h-4" />} iconColor="text-orange-400" />
           <StatCard label="Bucket" value={bucket} icon={<Trophy className="w-4 h-4" />} iconColor="text-yellow-400" />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <StatCard label="Wins" value={profile.lifetimeWins.toString()} iconColor="text-[#14F195]" />
+          <StatCard label="Wins" value={profile.lifetimeWins.toString()} iconColor="text-[#E6B84F]" />
           <StatCard label="Losses" value={profile.lifetimeLosses.toString()} iconColor="text-red-400" />
           <StatCard label="Draws" value={profile.lifetimeDraws.toString()} iconColor="text-[#8A8F98]" />
-          <StatCard label="Earnings" value={`${profile.totalEarnings.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} iconColor="text-[#14F195]" />
+          <StatCard label="Earnings" value={`${profile.totalEarnings.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} iconColor="text-[#E6B84F]" />
           <StatCard label="Wagered" value={`${profile.totalWagered.toLocaleString()}`} icon={<Coins className="w-4 h-4" />} />
         </div>
 
@@ -142,7 +142,7 @@ export default function Profile() {
           <div className="rounded-xl border border-white/5 overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02]">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Target className="w-5 h-5 text-[#14F195]" />
+                <Target className="w-5 h-5 text-[#E6B84F]" />
                 Matchups
               </h2>
             </div>
@@ -152,14 +152,14 @@ export default function Profile() {
                   <Link to={`/profile/${m.opponent}`} className="flex items-center gap-3 min-w-0 group">
                     <img src={avatarUrl(null, m.opponent)} alt="" className="w-8 h-8 rounded-full bg-white/5" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate group-hover:text-[#14F195] transition-colors">
+                      <p className="text-sm font-medium truncate group-hover:text-[#E6B84F] transition-colors">
                         {displayName(m.opponentName, m.opponent)}
                       </p>
                       <p className="text-xs text-[#8A8F98]">{m.games} games</p>
                     </div>
                   </Link>
                   <div className="flex items-center gap-3 text-sm font-mono shrink-0">
-                    <span className="text-[#14F195]">{m.wins}W</span>
+                    <span className="text-[#E6B84F]">{m.wins}W</span>
                     <span className="text-red-400">{m.losses}L</span>
                     <span className="text-[#8A8F98]">{m.draws}D</span>
                   </div>
@@ -173,7 +173,7 @@ export default function Profile() {
         <div className="rounded-xl border border-white/5 overflow-hidden mb-6">
           <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02]">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Swords className="w-5 h-5 text-[#14F195]" />
+              <Swords className="w-5 h-5 text-[#E6B84F]" />
               Recent Matches
             </h2>
           </div>
@@ -185,7 +185,7 @@ export default function Profile() {
                 <div key={match.id} className="px-6 py-3 flex items-center justify-between hover:bg-white/[0.02]">
                   <div className="flex items-center gap-3">
                     {match.won ? (
-                      <TrendingUp className="w-4 h-4 text-[#14F195]" />
+                      <TrendingUp className="w-4 h-4 text-[#E6B84F]" />
                     ) : match.resultType === "draw" ? (
                       <Minus className="w-4 h-4 text-[#8A8F98]" />
                     ) : (
@@ -198,13 +198,13 @@ export default function Profile() {
                           <span className="ml-2 text-[10px] uppercase tracking-wider text-yellow-300">Wager</span>
                         )}
                       </p>
-                      <Link to={`/profile/${match.opponent}`} className="text-xs text-[#8A8F98] font-mono hover:text-[#14F195]">
+                      <Link to={`/profile/${match.opponent}`} className="text-xs text-[#8A8F98] font-mono hover:text-[#E6B84F]">
                         vs {shortWallet(match.opponent)}
                       </Link>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className={`text-sm font-mono ${match.ratingChange > 0 ? "text-[#14F195]" : match.ratingChange < 0 ? "text-red-400" : "text-[#8A8F98]"}`}>
+                    <span className={`text-sm font-mono ${match.ratingChange > 0 ? "text-[#E6B84F]" : match.ratingChange < 0 ? "text-red-400" : "text-[#8A8F98]"}`}>
                       {match.ratingChange > 0 ? "+" : ""}{match.ratingChange}
                     </span>
                     {match.endedAt && (
@@ -221,7 +221,7 @@ export default function Profile() {
           <div className="rounded-xl border border-white/5 overflow-hidden">
             <div className="px-6 py-4 border-b border-white/5 bg-white/[0.02]">
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-[#14F195]" />
+                <Trophy className="w-5 h-5 text-[#E6B84F]" />
                 Reward History
               </h2>
             </div>
@@ -233,7 +233,7 @@ export default function Profile() {
                     <p className="text-xs text-[#8A8F98]">Rank {reward.rank}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-mono text-[#14F195]">{reward.amount.toFixed(2)} SOL</p>
+                    <p className="text-sm font-mono text-[#E6B84F]">{reward.amount.toFixed(2)} SOL</p>
                     <p className="text-xs text-[#8A8F98]">{reward.status}</p>
                   </div>
                 </div>
@@ -314,7 +314,7 @@ function ProfileEditor({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0a0a0f] p-6"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0A0905] p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold mb-4">Edit Profile</h2>
@@ -326,7 +326,7 @@ function ProfileEditor({
               <button
                 key={p.url}
                 onClick={() => setAvatar(p.url)}
-                className={`w-9 h-9 rounded-full overflow-hidden border ${avatar === p.url ? "border-[#14F195]" : "border-white/10 hover:border-white/30"}`}
+                className={`w-9 h-9 rounded-full overflow-hidden border ${avatar === p.url ? "border-[#E6B84F]" : "border-white/10 hover:border-white/30"}`}
                 title={p.label}
               >
                 <img src={p.url} alt={p.label} className="w-full h-full" />
@@ -357,7 +357,7 @@ function ProfileEditor({
           value={avatar}
           onChange={(e) => setAvatar(e.target.value)}
           placeholder="https://…"
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#14F195]/40"
+          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#E6B84F]/40"
         />
 
         <label className="block text-xs text-[#8A8F98] mb-1">Username</label>
@@ -366,7 +366,7 @@ function ProfileEditor({
           onChange={(e) => setUsername(e.target.value)}
           placeholder="3-20 chars, letters/numbers/_/-"
           maxLength={20}
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#14F195]/40"
+          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:border-[#E6B84F]/40"
         />
 
         <label className="block text-xs text-[#8A8F98] mb-1">Bio</label>
@@ -375,7 +375,7 @@ function ProfileEditor({
           onChange={(e) => setBio(e.target.value)}
           maxLength={280}
           rows={3}
-          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-2 resize-none focus:outline-none focus:border-[#14F195]/40"
+          className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm mb-2 resize-none focus:outline-none focus:border-[#E6B84F]/40"
         />
 
         {update.error && (
@@ -389,7 +389,7 @@ function ProfileEditor({
           <button
             onClick={save}
             disabled={update.isPending}
-            className="px-5 py-2 rounded-full bg-[#14F195] text-black text-sm font-semibold hover:bg-[#14F195]/90 disabled:opacity-50"
+            className="px-5 py-2 rounded-full bg-[#E6B84F] text-black text-sm font-semibold hover:bg-[#E6B84F]/90 disabled:opacity-50"
           >
             {update.isPending ? "Saving…" : "Save"}
           </button>

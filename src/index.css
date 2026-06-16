@@ -10,28 +10,28 @@
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 4%;
     --popover-foreground: 0 0% 98%;
-    --primary: 152 94% 51%;
+    --primary: 42 75% 61%;
     --primary-foreground: 0 0% 2%;
     --secondary: 0 0% 8%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 12%;
-    --muted-foreground: 220 5% 55%;
-    --accent: 270 100% 64%;
+    --muted-foreground: 40 5% 56%;
+    --accent: 43 89% 38%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 152 94% 51%;
+    --border: 40 8% 15%;
+    --input: 40 8% 15%;
+    --ring: 42 75% 61%;
     --radius: 0.625rem;
     --sidebar-background: 0 0% 2%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 152 94% 51%;
+    --sidebar-primary: 42 75% 61%;
     --sidebar-primary-foreground: 0 0% 2%;
     --sidebar-accent: 0 0% 8%;
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 152 94% 51%;
+    --sidebar-border: 40 8% 15%;
+    --sidebar-ring: 42 75% 61%;
   }
 
   body {
@@ -130,10 +130,10 @@
 /* Pulse glow */
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(20, 241, 149, 0.1);
+    box-shadow: 0 0 20px rgba(230, 184, 79, 0.1);
   }
   50% {
-    box-shadow: 0 0 40px rgba(20, 241, 149, 0.2);
+    box-shadow: 0 0 40px rgba(230, 184, 79, 0.2);
   }
 }
 
@@ -141,26 +141,18 @@
   animation: pulseGlow 3s ease-in-out infinite;
 }
 
-/* Landing atmosphere */
+/* Landing atmosphere — focused, elegant gold over near-black.
+   One tight warm bloom behind the hero + a deep-bronze counterweight, framed by
+   a vignette that falls to pure black at the edges. No oversaturation, no wide
+   wash (which read as murky/green). */
 @keyframes landingAuraDrift {
-  0% {
-    background-position: 48% 0%, 13% 31%, 89% 48%, 45% 88%, 100% 12%, 0 0;
-  }
-  45% {
-    background-position: 58% 5%, 20% 38%, 82% 41%, 53% 78%, 91% 18%, 0 0;
-  }
-  100% {
-    background-position: 51% 11%, 11% 43%, 93% 55%, 42% 80%, 96% 7%, 0 0;
-  }
+  0%   { transform: translate3d(-1.4%, -1%, 0) scale(1.01); opacity: 0.8; }
+  100% { transform: translate3d(1.4%, 1.4%, 0) scale(1.05); opacity: 1; }
 }
 
 @keyframes landingGrainDrift {
-  0% {
-    background-position: 0 0, 0 0, 50% 50%, 0 0;
-  }
-  100% {
-    background-position: 42px 24px, -36px 52px, 58% 47%, 0 12px;
-  }
+  0%   { background-position: 0 0; }
+  100% { background-position: 60px 40px; }
 }
 
 .landing-atmosphere {
@@ -168,57 +160,46 @@
   isolation: isolate;
   overflow: hidden;
   background:
-    linear-gradient(180deg, #050505 0%, #070807 45%, #050505 100%);
+    /* tight warm bloom, high-center, behind the hero piece */
+    radial-gradient(56% 40% at 50% -6%, rgba(232, 191, 96, 0.15) 0%, rgba(232, 191, 96, 0.045) 34%, transparent 60%),
+    /* faint deep-bronze counterweight, lower right */
+    radial-gradient(44% 38% at 85% 22%, rgba(176, 132, 38, 0.09) 0%, transparent 55%),
+    /* vignette: keep the corners pure black so the gold stays focused */
+    radial-gradient(125% 95% at 50% 2%, transparent 52%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(180deg, #070604 0%, #050505 46%, #040404 100%);
 }
 
 .landing-atmosphere::before,
 .landing-atmosphere::after {
   position: absolute;
-  inset: 0;
+  inset: -12%;
   z-index: 0;
   pointer-events: none;
   content: "";
 }
 
+/* Single soft bloom that drifts gently for life. `screen` so it only adds
+   light over the dark base, never muddies it. */
 .landing-atmosphere::before {
   background:
-    radial-gradient(ellipse at 54% 8%, rgba(20, 241, 149, 0.23) 0%, rgba(20, 241, 149, 0.08) 23%, transparent 46%),
-    radial-gradient(ellipse at 18% 34%, rgba(124, 77, 255, 0.3) 0%, rgba(124, 77, 255, 0.12) 25%, transparent 55%),
-    radial-gradient(ellipse at 86% 48%, rgba(255, 207, 107, 0.08) 0%, transparent 36%),
-    radial-gradient(ellipse at 48% 84%, rgba(20, 241, 149, 0.11) 0%, transparent 42%),
-    radial-gradient(ellipse at 82% 18%, rgba(154, 112, 255, 0.24) 0%, rgba(154, 112, 255, 0.09) 28%, transparent 54%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, transparent 44%, rgba(0, 0, 0, 0.28) 100%);
-  background-size: 128% 122%, 116% 132%, 120% 120%, 126% 126%, 118% 118%, 100% 100%;
-  background-position: 48% 0%, 13% 31%, 89% 48%, 45% 88%, 100% 12%, 0 0;
-  filter: saturate(1.28);
+    radial-gradient(36% 28% at 50% 8%, rgba(235, 198, 104, 0.13) 0%, transparent 62%);
   mix-blend-mode: screen;
-  opacity: 0.94;
-  transform: scale(1.08);
-  animation: landingAuraDrift 18s ease-in-out infinite alternate;
-  will-change: background-position;
+  animation: landingAuraDrift 20s ease-in-out infinite alternate;
+  will-change: transform, opacity;
 }
 
 .landing-atmosphere--closing::before {
   background:
-    radial-gradient(ellipse at 18% 16%, rgba(20, 241, 149, 0.14) 0%, rgba(20, 241, 149, 0.055) 25%, transparent 52%),
-    radial-gradient(ellipse at 82% 30%, rgba(124, 77, 255, 0.3) 0%, rgba(124, 77, 255, 0.12) 24%, transparent 54%),
-    radial-gradient(ellipse at 50% 86%, rgba(255, 207, 107, 0.075) 0%, transparent 42%),
-    radial-gradient(ellipse at 38% 62%, rgba(154, 112, 255, 0.18) 0%, transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0%, transparent 46%, rgba(0, 0, 0, 0.32) 100%);
-  background-size: 118% 124%, 126% 116%, 120% 120%, 122% 126%, 100% 100%;
-  background-position: 16% 12%, 84% 26%, 50% 86%, 38% 62%, 0 0;
+    radial-gradient(40% 30% at 32% 80%, rgba(232, 191, 96, 0.09) 0%, transparent 60%);
 }
 
+/* Fine film grain to kill gradient banding — very subtle. */
 .landing-atmosphere::after {
   background:
-    repeating-radial-gradient(circle at 17% 23%, rgba(255, 255, 255, 0.2) 0 0.5px, transparent 0.75px 2.5px),
-    repeating-radial-gradient(circle at 74% 61%, rgba(20, 241, 149, 0.12) 0 0.45px, transparent 0.7px 2.7px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 74%, rgba(0, 0, 0, 0.4)),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 4px);
-  background-size: 180px 180px, 220px 220px, 100% 100%, 100% 100%;
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px);
   mix-blend-mode: overlay;
-  opacity: 0.34;
-  animation: landingGrainDrift 28s linear infinite alternate;
+  opacity: 0.5;
+  animation: landingGrainDrift 30s linear infinite alternate;
   will-change: background-position;
 }
 
@@ -234,9 +215,8 @@
 
 .landing-rewards {
   background:
-    radial-gradient(ellipse at 50% 8%, rgba(20, 241, 149, 0.085) 0%, transparent 42%),
-    radial-gradient(ellipse at 82% 54%, rgba(124, 77, 255, 0.07) 0%, transparent 38%),
-    linear-gradient(180deg, #050505 0%, #060706 48%, #050505 100%);
+    radial-gradient(58% 42% at 50% 0%, rgba(232, 191, 96, 0.06) 0%, transparent 50%),
+    linear-gradient(180deg, #050505 0%, #060504 50%, #040404 100%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -272,11 +252,11 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #14F195;
+  background: #E6B84F;
 }
 
 /* Selection color */
 ::selection {
-  background: rgba(20, 241, 149, 0.3);
+  background: rgba(230, 184, 79, 0.3);
   color: white;
 }

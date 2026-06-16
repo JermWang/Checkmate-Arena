@@ -16,7 +16,7 @@ export default function Rewards() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
-            <Gift className="w-8 h-8 text-[#14F195]" />
+            <Gift className="w-8 h-8 text-[#E6B84F]" />
             Rewards
           </h1>
           <p className="text-[#8A8F98] mt-1">
@@ -26,15 +26,15 @@ export default function Rewards() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Current Epoch Card */}
-          <div className="p-6 rounded-xl border border-[#14F195]/20 bg-gradient-to-br from-[#14F195]/5 to-transparent">
+          <div className="p-6 rounded-xl border border-[#E6B84F]/20 bg-gradient-to-br from-[#E6B84F]/5 to-transparent">
             <div className="flex items-center gap-2 mb-4">
-              <Clock className="w-5 h-5 text-[#14F195]" />
+              <Clock className="w-5 h-5 text-[#E6B84F]" />
               <h2 className="text-lg font-semibold">Current Epoch</h2>
             </div>
 
             {rewardLoading ? (
               <div className="py-8 text-center text-[#8A8F98]">
-                <div className="w-6 h-6 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <div className="w-6 h-6 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 Loading...
               </div>
             ) : currentReward && currentReward.status !== "no_epoch" ? (
@@ -44,9 +44,9 @@ export default function Rewards() {
                   <p className="text-xs text-[#8A8F98] uppercase tracking-widest mb-2">Payout In</p>
                   <div className="flex items-center justify-center gap-2">
                     <TimeBox value={hours} label="HRS" />
-                    <span className="text-2xl text-[#14F195]">:</span>
+                    <span className="text-2xl text-[#E6B84F]">:</span>
                     <TimeBox value={minutes} label="MIN" />
-                    <span className="text-2xl text-[#14F195]">:</span>
+                    <span className="text-2xl text-[#E6B84F]">:</span>
                     <TimeBox value={seconds} label="SEC" />
                   </div>
                 </div>
@@ -55,7 +55,7 @@ export default function Rewards() {
                 <div className="p-4 rounded-lg bg-white/5 border border-white/5">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-[#8A8F98]">Reward Pool</span>
-                    <span className="text-2xl font-bold text-[#14F195]">
+                    <span className="text-2xl font-bold text-[#E6B84F]">
                       {currentReward.rewardPool.toFixed(2)} SOL
                     </span>
                   </div>
@@ -74,7 +74,7 @@ export default function Rewards() {
                         <span className="text-xs text-[#8A8F98] w-6">{p.rank}</span>
                         <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-[#14F195] rounded-full"
+                            className="h-full bg-[#E6B84F] rounded-full"
                             style={{ width: `${(p.percentage / 25) * 100}%` }}
                           />
                         </div>
@@ -94,7 +94,7 @@ export default function Rewards() {
           {/* Payout Rules */}
           <div className="p-6 rounded-xl border border-white/5 bg-white/[0.02]">
             <div className="flex items-center gap-2 mb-4">
-              <Trophy className="w-5 h-5 text-[#14F195]" />
+              <Trophy className="w-5 h-5 text-[#E6B84F]" />
               <h2 className="text-lg font-semibold">Payout Distribution</h2>
             </div>
 
@@ -116,7 +116,7 @@ export default function Rewards() {
                   className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-white/5 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-[#14F195] w-12">{item.rank}</span>
+                    <span className="text-sm font-semibold text-[#E6B84F] w-12">{item.rank}</span>
                     <span className="text-xs text-[#8A8F98]">{item.desc}</span>
                   </div>
                   <span className="text-sm font-mono font-semibold">{item.pct}</span>
@@ -127,7 +127,7 @@ export default function Rewards() {
             <div className="mt-4 pt-4 border-t border-white/5">
               <div className="flex items-center justify-between text-xs text-[#8A8F98]">
                 <span>Leaderboard Pool</span>
-                <span className="text-[#14F195]">50%</span>
+                <span className="text-[#E6B84F]">50%</span>
               </div>
               <div className="flex items-center justify-between text-xs text-[#8A8F98] mt-1">
                 <span>Treasury</span>
@@ -149,7 +149,7 @@ export default function Rewards() {
         {history && history.length > 0 && (
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Wallet className="w-5 h-5 text-[#14F195]" />
+              <Wallet className="w-5 h-5 text-[#E6B84F]" />
               Recent Payouts
             </h2>
             <div className="overflow-x-auto rounded-xl border border-white/5">
@@ -173,7 +173,7 @@ export default function Rewards() {
                         <span className="text-xs text-[#8A8F98]">+{epoch.winners.length - 3}</span>
                       )}
                     </div>
-                    <span className="text-sm font-mono text-right text-[#14F195]">{epoch.totalPool.toFixed(2)} SOL</span>
+                    <span className="text-sm font-mono text-right text-[#E6B84F]">{epoch.totalPool.toFixed(2)} SOL</span>
                     <span className="text-xs text-[#8A8F98] text-right">
                       {new Date(epoch.endsAt).toLocaleDateString()}
                     </span>

@@ -1,6 +1,4 @@
-import { Suspense, useMemo, type CSSProperties, type ReactNode } from "react";
-import { useLoader } from "@react-three/fiber";
-import { ThreeCanvas } from "@remotion/three";
+import { type CSSProperties, type ReactNode } from "react";
 import { Coins, Crown, Lock, Shield, Swords, Trophy, Zap } from "lucide-react";
 import {
   AbsoluteFill,
@@ -12,11 +10,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-const BRAND = "#14F195";
-const PURPLE = "#7c4dff";
+const BRAND = "#E6B84F";
+const PURPLE = "#B8860B";
 const YELLOW = "#ffcf6b";
 const BLACK = "#050505";
 const MUTED = "#8A8F98";
@@ -25,23 +21,6 @@ const BORDER = "rgba(255, 255, 255, 0.06)";
 const PANEL = "rgba(255, 255, 255, 0.025)";
 const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);
 const EASE_IO = Easing.bezier(0.45, 0, 0.55, 1);
-
-const PIECE_NODE = {
-  wP: "White Pawn_all Metarial_0",
-  wR: "White Rook Left_all Metarial_0",
-  wN: "White Horse Left_all Metarial_0",
-  wB: "White Bishop Left_all Metarial_0",
-  wQ: "White Queen_all Metarial_0",
-  wK: "White King_all Metarial_0",
-  bP: "Black Pawn_all Metarial_0",
-  bR: "Black Rook Left_all Metarial_0",
-  bN: "Black Horse Left_all Metarial_0",
-  bB: "Black Bishop Left_all Metarial_0",
-  bQ: "Black Queen_all Metarial_0",
-  bK: "Black King_all Metarial_0",
-} as const;
-
-type PieceKey = keyof typeof PIECE_NODE;
 
 const rewardRows = [
   { rank: "1st", split: "25%", detail: "Top player" },
@@ -66,7 +45,7 @@ export function CheckmateArenaOnboarding() {
       <CinematicNoise frame={frame} />
       <BrandHeader />
       <ProgressRail frame={frame} />
-      <ChessScene frame={frame} />
+      <PieceImageScene frame={frame} />
 
       <Scene from={0} duration={6.2 * fps}>
         <OpeningBeat start={0} frame={frame} />
@@ -116,17 +95,25 @@ function OpeningBeat({ start, frame }: BeatProps) {
         <Eyebrow>Ranked chess on Solana</Eyebrow>
         <h1 style={styles.heroTitle}>
           Enter the
-          <span style={styles.greenLine}>King of Games</span>
+          <span style={styles.accentLine}>King of Games</span>
         </h1>
         <p style={styles.heroCopy}>
-          Connect your wallet, enter ranked matchmaking, chase the daily leaderboard,
+          Hold 10,000 $CHESS to enter ranked matchmaking, chase the daily leaderboard,
           or opt into escrow-backed $CHESS wagers.
         </p>
         <div style={styles.buttonRow}>
-          <Pill tone="green" icon={<Swords size={24} />}>
-            Play ranked
+          <Pill tone="primary" icon={<Swords size={24} />}>
+            Play Ranked
           </Pill>
-          <Pill icon={<Trophy size={24} />}>View leaderboard</Pill>
+          <Pill icon={<Trophy size={24} />}>View Leaderboard</Pill>
+        </div>
+        <div style={styles.statusPill}>
+          <span style={styles.statusDot} />
+          <span style={styles.statusStrong}>10K $CHESS</span>
+          <span>required for ranked</span>
+          <span style={styles.statusDivider}>·</span>
+          <span style={styles.statusStrong}>24h</span>
+          <span>reward cycle</span>
         </div>
         <p style={styles.powered}>Powered by Solana</p>
       </div>
@@ -226,7 +213,8 @@ function WagerBeat({ start, frame }: BeatProps) {
         <Eyebrow>Opt-in $CHESS</Eyebrow>
         <h2 style={styles.sceneTitle}>Play for keeps.</h2>
         <p style={styles.sceneCopy}>
-          Public challenges and private rooms settle on-chain in $CHESS.
+          Ranked unlocks at 10,000 $CHESS. Public challenges and private rooms settle
+          on-chain in $CHESS.
         </p>
         <div style={styles.modeGrid}>
           <ModeCard
@@ -269,17 +257,18 @@ function FinalBeat({ start, frame }: BeatProps) {
         <div
           style={{
             ...styles.finalIcon,
-            boxShadow: `0 0 ${64 + pulse * 34}px rgba(20, 241, 149, 0.3)`,
+            boxShadow: `0 0 ${64 + pulse * 34}px rgba(230, 184, 79, 0.3)`,
           }}
         >
           <Crown size={52} />
         </div>
         <h2 style={styles.finalTitle}>Checkmate Arena</h2>
         <p style={styles.finalCopy}>
-          Ranked matchmaking. Daily top-10 rewards. Escrow-backed wager lobbies.
+          Hold 10K $CHESS for ranked matchmaking. Daily top-10 rewards.
+          Escrow-backed wager lobbies.
         </p>
         <div style={styles.buttonRowCenter}>
-          <Pill tone="green" icon={<Zap size={24} />}>
+          <Pill tone="primary" icon={<Zap size={24} />}>
             Join the Arena
           </Pill>
           <Pill icon={<Shield size={24} />}>Server validated</Pill>
@@ -289,127 +278,77 @@ function FinalBeat({ start, frame }: BeatProps) {
   );
 }
 
-function ChessScene({ frame }: { frame: number }) {
-  const { width, height } = useVideoConfig();
+function PieceImageScene({ frame }: { frame: number }) {
   const hero = windowed(frame, 0, 172);
   const rewards = windowed(frame, 148, 370);
   const wagers = windowed(frame, 335, 565);
   const close = windowed(frame, 536, 720);
-  const drift = Math.sin(frame / 42) * 0.16;
+  const drift = Math.sin(frame / 42) * 13;
+  const slowScale = 1 + Math.sin(frame / 86) * 0.014;
 
   return (
-    <AbsoluteFill style={styles.threeLayer}>
-      <ThreeCanvas
-        width={width}
-        height={height}
-        shadows
-        dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 1.05, 7.2], fov: 32 }}
-      >
-        <Suspense fallback={null}>
-          <ChessPieces
-            frame={frame}
-            drift={drift}
-            hero={hero}
-            rewards={rewards}
-            wagers={wagers}
-            close={close}
-          />
-        </Suspense>
-      </ThreeCanvas>
+    <AbsoluteFill style={styles.pieceImageLayer}>
+      <div
+        style={{
+          ...styles.pieceGlow,
+          opacity: hero * 0.9,
+          right: 160,
+          top: 122 + drift,
+          transform: `scale(${slowScale})`,
+        }}
+      />
+      <Img
+        src={staticFile("king-piece-png.png")}
+        style={{
+          ...styles.heroPieceImage,
+          opacity: hero * 0.86,
+          transform: `translateY(${drift}px) scale(${slowScale})`,
+        }}
+      />
+
+      <Img
+        src={staticFile("king-piece-png.png")}
+        style={{
+          ...styles.rewardPieceLeft,
+          opacity: rewards * 0.16,
+          transform: `translateY(${-drift * 0.35}px) rotate(-8deg) scale(${1 + rewards * 0.04})`,
+        }}
+      />
+      <Img
+        src={staticFile("king-piece-png.png")}
+        style={{
+          ...styles.rewardPieceRight,
+          opacity: rewards * 0.2,
+          transform: `translateY(${drift * 0.4}px) rotate(8deg) scale(${1 + rewards * 0.05})`,
+        }}
+      />
+
+      <Img
+        src={staticFile("king-piece-png.png")}
+        style={{
+          ...styles.wagerPieceImage,
+          opacity: wagers * 0.42,
+          transform: `translateY(${drift * 0.7}px) scale(${1 + wagers * 0.035})`,
+        }}
+      />
+
+      <div
+        style={{
+          ...styles.finalPieceHalo,
+          opacity: close * 0.9,
+          transform: `translateX(-50%) scale(${0.98 + close * 0.04})`,
+        }}
+      />
+      <Img
+        src={staticFile("king-piece-png.png")}
+        style={{
+          ...styles.finalPieceImage,
+          opacity: close * 0.13,
+          transform: `translateX(-50%) translateY(${drift * 0.25}px) scale(${0.98 + close * 0.03})`,
+        }}
+      />
     </AbsoluteFill>
   );
-}
-
-function ChessPieces({
-  frame,
-  drift,
-  hero,
-  rewards,
-  wagers,
-  close,
-}: {
-  frame: number;
-  drift: number;
-  hero: number;
-  rewards: number;
-  wagers: number;
-  close: number;
-}) {
-  const gltf = useLoader(GLTFLoader, staticFile("chess_set.optimized.glb"));
-  const scene = gltf.scene;
-  const orbit = frame * 0.011;
-
-  return (
-    <>
-      <ambientLight intensity={0.58} />
-      <directionalLight position={[3, 6, 4]} intensity={4.8} castShadow />
-      <directionalLight position={[-4, 2, 3]} intensity={1.35} color="#9fb8ff" />
-      <directionalLight position={[0, 3, 5]} intensity={1.8} color="#ffffff" />
-      <pointLight position={[-2, 3, -4]} intensity={48} distance={14} color={BRAND} />
-      <pointLight position={[2.8, 1.5, -3]} intensity={28} distance={10} color={PURPLE} />
-      <pointLight position={[3, 4, 3]} intensity={9} distance={12} color={YELLOW} />
-
-      <group position={[2.35, -1.52 + drift, 0]} scale={1.18 * hero}>
-        <Piece scene={scene} pieceKey="wN" height={3.15} rotationY={-Math.PI / 2 + orbit} />
-      </group>
-
-      <group position={[3.02, -1.42 + drift * 0.8, -0.1]} scale={1.02 * rewards}>
-        <Piece scene={scene} pieceKey="wK" height={2.6} rotationY={orbit * 1.05} />
-      </group>
-      <group position={[-3.12, -1.58 - drift * 0.35, -0.18]} scale={0.9 * rewards}>
-        <Piece scene={scene} pieceKey="wQ" height={2.38} rotationY={-orbit * 1.4} />
-      </group>
-
-      <group position={[3.08, -1.54 + drift, 0.05]} scale={1.08 * wagers}>
-        <Piece scene={scene} pieceKey="bR" height={2.34} rotationY={orbit + Math.PI * 0.18} dark />
-      </group>
-      <group position={[1.88, -1.4 - drift * 0.65, 0.22]} scale={0.86 * wagers}>
-        <Piece scene={scene} pieceKey="wP" height={1.88} rotationY={orbit * 1.25} />
-      </group>
-
-      <group position={[0, -1.5 + drift * 0.45, 0]} scale={1.1 * close}>
-        <Piece scene={scene} pieceKey="wK" height={2.9} rotationY={orbit * 1.25} />
-      </group>
-    </>
-  );
-}
-
-function Piece({
-  scene,
-  pieceKey,
-  height,
-  rotationY,
-  dark = false,
-}: {
-  scene: THREE.Object3D;
-  pieceKey: PieceKey;
-  height: number;
-  rotationY: number;
-  dark?: boolean;
-}) {
-  const { geometry, material } = useMemo(() => {
-    const geo = bakedGeometry(scene, PIECE_NODE[pieceKey]);
-    geo.computeBoundingBox();
-    const box = geo.boundingBox;
-    const modelHeight = box ? box.max.y - box.min.y : 1;
-    const scale = height / (modelHeight || 1);
-    geo.scale(scale, scale, scale);
-    geo.computeBoundingBox();
-
-    const srcMesh = findMesh(scene, PIECE_NODE[pieceKey]);
-    const mat = (
-      Array.isArray(srcMesh.material) ? srcMesh.material[0] : srcMesh.material
-    ).clone() as THREE.MeshStandardMaterial;
-    mat.envMapIntensity = 1.1;
-    mat.color = new THREE.Color(dark ? "#15151c" : "#EDE7DA");
-    mat.metalness = dark ? 0.45 : 0.25;
-    mat.roughness = dark ? 0.3 : 0.35;
-    return { geometry: geo, material: mat };
-  }, [dark, height, pieceKey, scene]);
-
-  return <mesh geometry={geometry} material={material} rotation={[0, rotationY, 0]} castShadow />;
 }
 
 function ModeCard({
@@ -446,7 +385,7 @@ function PoolBar({ progress }: { progress: number }) {
     <div style={styles.poolWrap}>
       <div style={styles.poolBar}>
         <span style={{ ...styles.poolSegment, width: `${25 * progress}%`, background: BRAND }} />
-        <span style={{ ...styles.poolSegment, width: `${18 * progress}%`, background: "#10c77a" }} />
+        <span style={{ ...styles.poolSegment, width: `${18 * progress}%`, background: "#C9A227" }} />
         <span style={{ ...styles.poolSegment, width: `${14 * progress}%`, background: "#27aee4" }} />
         <span style={{ ...styles.poolSegment, width: `${10 * progress}%`, background: PURPLE }} />
         <span style={{ ...styles.poolSegment, width: `${33 * progress}%`, background: "#9ca3af" }} />
@@ -492,24 +431,30 @@ function ProgressRail({ frame }: { frame: number }) {
 }
 
 function Atmosphere({ frame }: { frame: number }) {
-  const greenX = 54 + Math.sin(frame / 95) * 6;
-  const purpleX = 18 + Math.cos(frame / 82) * 7;
-  const purpleY = 34 + Math.sin(frame / 77) * 8;
-  const purpleTwoY = 18 + Math.sin(frame / 88) * 8;
+  const bloomX = 50 + Math.sin(frame / 112) * 1.4;
+  const bloomY = -6 + Math.cos(frame / 126) * 1.2;
+  const bronzeX = 85 + Math.cos(frame / 118) * 1.6;
+  const bronzeY = 22 + Math.sin(frame / 104) * 1.2;
 
   return (
     <AbsoluteFill
       style={{
         background:
-          `radial-gradient(ellipse at ${greenX}% 8%, rgba(20, 241, 149, 0.24) 0%, rgba(20, 241, 149, 0.08) 23%, transparent 46%),` +
-          `radial-gradient(ellipse at ${purpleX}% ${purpleY}%, rgba(124, 77, 255, 0.34) 0%, rgba(124, 77, 255, 0.12) 25%, transparent 55%),` +
-          `radial-gradient(ellipse at 86% 48%, rgba(255, 207, 107, 0.08) 0%, transparent 36%),` +
-          `radial-gradient(ellipse at 48% 84%, rgba(20, 241, 149, 0.11) 0%, transparent 42%),` +
-          `radial-gradient(ellipse at 82% ${purpleTwoY}%, rgba(154, 112, 255, 0.26) 0%, rgba(154, 112, 255, 0.09) 28%, transparent 54%),` +
-          "linear-gradient(180deg, #050505 0%, #070807 45%, #050505 100%)",
-        filter: "saturate(1.28)",
+          `radial-gradient(56% 40% at ${bloomX}% ${bloomY}%, rgba(232, 191, 96, 0.15) 0%, rgba(232, 191, 96, 0.045) 34%, transparent 60%),` +
+          `radial-gradient(44% 38% at ${bronzeX}% ${bronzeY}%, rgba(176, 132, 38, 0.09) 0%, transparent 55%),` +
+          "radial-gradient(125% 95% at 50% 2%, transparent 52%, rgba(0, 0, 0, 0.55) 100%)," +
+          "linear-gradient(180deg, #070604 0%, #050505 46%, #040404 100%)",
       }}
-    />
+    >
+      <AbsoluteFill
+        style={{
+          background:
+            `radial-gradient(36% 28% at ${bloomX}% 8%, rgba(235, 198, 104, 0.13) 0%, transparent 62%)`,
+          mixBlendMode: "screen",
+          opacity: interpolate(Math.sin(frame / 90), [-1, 1], [0.8, 1]),
+        }}
+      />
+    </AbsoluteFill>
   );
 }
 
@@ -518,13 +463,10 @@ function CinematicNoise({ frame }: { frame: number }) {
     <AbsoluteFill
       style={{
         background:
-          "repeating-radial-gradient(circle at 17% 23%, rgba(255, 255, 255, 0.2) 0 0.5px, transparent 0.75px 2.5px)," +
-          "repeating-radial-gradient(circle at 74% 61%, rgba(20, 241, 149, 0.12) 0 0.45px, transparent 0.7px 2.7px)," +
-          "linear-gradient(90deg, rgba(0, 0, 0, 0.46), transparent 22%, transparent 74%, rgba(0, 0, 0, 0.4))," +
-          "repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 4px)",
-        backgroundPosition: `${frame * 0.16}px ${frame * 0.08}px, ${-frame * 0.12}px ${frame * 0.18}px, 0 0, 0 ${frame * 0.04}px`,
+          "repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px)",
+        backgroundPosition: `0 ${frame * 0.04}px`,
         mixBlendMode: "overlay",
-        opacity: 0.34,
+        opacity: 0.5,
       }}
     />
   );
@@ -540,11 +482,11 @@ function Pill({
   children,
 }: {
   icon: ReactNode;
-  tone?: "green";
+  tone?: "primary";
   children: ReactNode;
 }) {
   return (
-    <div style={tone === "green" ? styles.pillGreen : styles.pill}>
+    <div style={tone === "primary" ? styles.pillPrimary : styles.pill}>
       {icon}
       <span>{children}</span>
     </div>
@@ -660,7 +602,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 0.96,
     maxWidth: 740,
   },
-  greenLine: {
+  accentLine: {
     color: BRAND,
     display: "block",
   },
@@ -697,7 +639,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     marginTop: 42,
   },
-  pillGreen: {
+  pillPrimary: {
     alignItems: "center",
     backgroundColor: BRAND,
     borderRadius: 999,
@@ -708,6 +650,35 @@ const styles: Record<string, CSSProperties> = {
     gap: 12,
     height: 64,
     padding: "0 32px",
+  },
+  statusPill: {
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    borderRadius: 999,
+    color: BODY,
+    display: "inline-flex",
+    fontSize: 18,
+    gap: 12,
+    lineHeight: 1,
+    marginTop: 28,
+    padding: "14px 20px",
+  },
+  statusDot: {
+    backgroundColor: BRAND,
+    borderRadius: 999,
+    boxShadow: "0 0 22px rgba(230, 184, 79, 0.7)",
+    display: "inline-block",
+    height: 10,
+    width: 10,
+  },
+  statusStrong: {
+    color: "#fff",
+    fontFamily: "'Space Grotesk', system-ui, sans-serif",
+    fontWeight: 700,
+  },
+  statusDivider: {
+    color: "rgba(255, 255, 255, 0.16)",
   },
   pill: {
     alignItems: "center",
@@ -745,8 +716,8 @@ const styles: Record<string, CSSProperties> = {
     textAlign: "left",
   },
   rewardCardHot: {
-    backgroundColor: "rgba(20, 241, 149, 0.1)",
-    border: "1px solid rgba(20, 241, 149, 0.45)",
+    backgroundColor: "rgba(230, 184, 79, 0.1)",
+    border: "1px solid rgba(230, 184, 79, 0.45)",
   },
   rewardTopline: {
     alignItems: "baseline",
@@ -852,8 +823,8 @@ const styles: Record<string, CSSProperties> = {
   },
   finalIcon: {
     alignItems: "center",
-    backgroundColor: "rgba(20, 241, 149, 0.1)",
-    border: "1px solid rgba(20, 241, 149, 0.35)",
+    backgroundColor: "rgba(230, 184, 79, 0.1)",
+    border: "1px solid rgba(230, 184, 79, 0.35)",
     borderRadius: 999,
     color: BRAND,
     display: "flex",
@@ -930,5 +901,78 @@ const styles: Record<string, CSSProperties> = {
   },
   threeLayer: {
     zIndex: 3,
+  },
+  pieceImageLayer: {
+    overflow: "hidden",
+    pointerEvents: "none",
+    zIndex: 3,
+  },
+  pieceGlow: {
+    background:
+      "radial-gradient(closest-side, rgba(230, 184, 79, 0.18), rgba(184, 134, 11, 0.1) 42%, transparent 72%)",
+    borderRadius: 999,
+    filter: "blur(16px)",
+    height: 680,
+    position: "absolute",
+    width: 560,
+  },
+  heroPieceImage: {
+    filter:
+      "hue-rotate(-108deg) saturate(0.82) brightness(0.92) drop-shadow(0 34px 94px rgba(230, 184, 79, 0.32))",
+    height: 820,
+    objectFit: "contain",
+    position: "absolute",
+    right: 150,
+    top: 96,
+    width: 560,
+  },
+  rewardPieceLeft: {
+    filter: "hue-rotate(-108deg) saturate(0.72) brightness(0.78) blur(0.2px)",
+    height: 760,
+    left: -20,
+    objectFit: "contain",
+    position: "absolute",
+    top: 210,
+    width: 430,
+  },
+  rewardPieceRight: {
+    filter:
+      "hue-rotate(-108deg) saturate(0.72) brightness(0.82) drop-shadow(0 28px 72px rgba(230, 184, 79, 0.16))",
+    height: 820,
+    objectFit: "contain",
+    position: "absolute",
+    right: -30,
+    top: 160,
+    width: 470,
+  },
+  wagerPieceImage: {
+    filter:
+      "hue-rotate(-108deg) saturate(0.78) brightness(0.84) drop-shadow(0 30px 80px rgba(230, 184, 79, 0.18))",
+    height: 860,
+    objectFit: "contain",
+    position: "absolute",
+    right: 34,
+    top: 128,
+    width: 500,
+  },
+  finalPieceHalo: {
+    background:
+      "radial-gradient(closest-side, rgba(230, 184, 79, 0.16), rgba(184, 134, 11, 0.08) 42%, transparent 76%)",
+    borderRadius: 999,
+    filter: "blur(20px)",
+    height: 720,
+    left: "50%",
+    position: "absolute",
+    top: 120,
+    width: 600,
+  },
+  finalPieceImage: {
+    filter: "hue-rotate(-108deg) saturate(0.7) brightness(0.72)",
+    height: 860,
+    left: "50%",
+    objectFit: "contain",
+    position: "absolute",
+    top: 114,
+    width: 520,
   },
 };

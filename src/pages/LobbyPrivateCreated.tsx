@@ -74,7 +74,7 @@ export default function LobbyPrivateCreated() {
     <div className="min-h-screen bg-[#050505] text-white pt-16">
       <div className="max-w-3xl mx-auto px-4 md:px-8 py-6">
         <div className="flex items-center gap-3 mb-6">
-          <Lock className="w-5 h-5 text-[#14F195]" />
+          <Lock className="w-5 h-5 text-[#E6B84F]" />
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
             Room created
           </h1>
@@ -93,7 +93,7 @@ export default function LobbyPrivateCreated() {
               <div className="text-[10px] uppercase tracking-wider text-[#8A8F98] mb-1">
                 Status
               </div>
-              <div className="inline-flex items-center gap-1.5 text-sm text-[#14F195]">
+              <div className="inline-flex items-center gap-1.5 text-sm text-[#E6B84F]">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Stake locked in escrow
               </div>
@@ -101,7 +101,7 @@ export default function LobbyPrivateCreated() {
           </div>
 
           {/* Code reveal */}
-          <div className="rounded-2xl border border-[#14F195]/30 bg-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(20,241,149,0.15),0_0_32px_rgba(20,241,149,0.10)]">
+          <div className="rounded-2xl border border-[#E6B84F]/30 bg-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(230, 184, 79,0.15),0_0_32px_rgba(230, 184, 79,0.10)]">
             <h2 className="text-sm font-medium">Share this code</h2>
             <p className="text-xs text-[#8A8F98] mt-1">
               Single-use. The first person to enter it joins.
@@ -110,7 +110,7 @@ export default function LobbyPrivateCreated() {
               {code.split("").map((ch, i) => (
                 <div
                   key={i}
-                  className="flex aspect-square items-center justify-center rounded-lg border border-[#14F195]/30 bg-white/[0.02] font-mono text-2xl text-[#14F195]"
+                  className="flex aspect-square items-center justify-center rounded-lg border border-[#E6B84F]/30 bg-white/[0.02] font-mono text-2xl text-[#E6B84F]"
                 >
                   {ch}
                 </div>
@@ -130,7 +130,7 @@ export default function LobbyPrivateCreated() {
                 {copied ? "Copied" : "Copy link"}
               </Button>
               <Button
-                className="flex-1 bg-[#14F195] text-black hover:bg-[#14F195]/90"
+                className="flex-1 bg-[#E6B84F] text-black hover:bg-[#E6B84F]/90"
                 onClick={onCancel}
                 disabled={cancelMut.isPending}
               >
@@ -152,7 +152,7 @@ function Row({ k, v, green }: { k: string; v: string; green?: boolean }) {
   return (
     <div className="flex items-center justify-between border-b border-white/5 py-2 text-sm last:border-0">
       <span className="text-[#8A8F98]">{k}</span>
-      <span className={green ? "font-mono text-[#14F195]" : "font-mono text-white"}>
+      <span className={green ? "font-mono text-[#E6B84F]" : "font-mono text-white"}>
         {v}
       </span>
     </div>

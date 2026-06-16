@@ -23,7 +23,7 @@ export default function Leaderboard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-[#14F195]" />
+              <Trophy className="w-8 h-8 text-[#E6B84F]" />
               Leaderboard
             </h1>
             <p className="text-[#8A8F98] mt-1">
@@ -33,11 +33,11 @@ export default function Leaderboard() {
 
           {/* Epoch countdown */}
           {epochData && epochData.status !== "no_epoch" && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#14F195]/20 bg-[#14F195]/5">
-              <Clock className="w-5 h-5 text-[#14F195]" />
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-[#E6B84F]/20 bg-[#E6B84F]/5">
+              <Clock className="w-5 h-5 text-[#E6B84F]" />
               <div>
                 <p className="text-xs text-[#8A8F98]">Next payout in</p>
-                <p className="text-lg font-mono font-bold text-[#14F195]">
+                <p className="text-lg font-mono font-bold text-[#E6B84F]">
                   {hours.toString().padStart(2, "0")}:{minutes.toString().padStart(2, "0")}
                 </p>
               </div>
@@ -51,7 +51,7 @@ export default function Leaderboard() {
             onClick={() => setView("daily")}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
               view === "daily"
-                ? "bg-[#14F195] text-black"
+                ? "bg-[#E6B84F] text-black"
                 : "border border-white/10 text-[#8A8F98] hover:border-white/20"
             }`}
           >
@@ -61,7 +61,7 @@ export default function Leaderboard() {
             onClick={() => setView("lifetime")}
             className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
               view === "lifetime"
-                ? "bg-[#14F195] text-black"
+                ? "bg-[#E6B84F] text-black"
                 : "border border-white/10 text-[#8A8F98] hover:border-white/20"
             }`}
           >
@@ -85,7 +85,7 @@ export default function Leaderboard() {
             {/* Rows */}
             {isLoading ? (
               <div className="px-6 py-12 text-center text-[#8A8F98]">
-                <div className="w-6 h-6 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <div className="w-6 h-6 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 Loading...
               </div>
             ) : players && players.length > 0 ? (
@@ -94,7 +94,7 @@ export default function Leaderboard() {
                   <div
                     key={player.walletAddress}
                     className={`grid grid-cols-[60px_1fr_120px_100px_100px] md:grid-cols-[80px_1fr_120px_120px_120px_120px] gap-4 px-4 md:px-6 py-3 items-center hover:bg-white/[0.02] transition-colors ${
-                      i < 3 ? "bg-[#14F195]/[0.02]" : ""
+                      i < 3 ? "bg-[#E6B84F]/[0.02]" : ""
                     }`}
                   >
                   {/* Rank */}
@@ -124,7 +124,7 @@ export default function Leaderboard() {
 
                   {/* Score/Wins */}
                   <div className="text-right">
-                    <span className="text-sm text-[#14F195]">
+                    <span className="text-sm text-[#E6B84F]">
                       {view === "daily" ? (player as any).score : (player as any).wins}
                     </span>
                   </div>

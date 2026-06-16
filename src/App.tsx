@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router";
 import { WalletProvider } from "./components/wallet/WalletProvider";
+import { ArenaStatsProvider } from "./providers/arenaStats";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Play from "./pages/Play";
@@ -17,8 +18,9 @@ import LobbyPrivateJoin from "./pages/LobbyPrivateJoin";
 export default function App() {
   return (
     <WalletProvider>
-      <Navbar />
-      <Routes>
+      <ArenaStatsProvider>
+        <Navbar />
+        <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/play" element={<Play />} />
         <Route path="/lobby" element={<Lobby />} />
@@ -31,7 +33,8 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </ArenaStatsProvider>
     </WalletProvider>
   );
 }

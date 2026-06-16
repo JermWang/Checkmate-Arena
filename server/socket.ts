@@ -67,6 +67,23 @@ const socketToSpectatedMatch = new Map<string, number>();
 
 let io: SocketIOServer<ClientToServerEvents, ServerToClientEvents>;
 
+// Live arena activity, pushed to every connected client so visitors can see how
+// many players are waiting before they commit to queueing. `online` counts
+// distinct wallets currently connected (stats-only sockets don't identify, so
+// they never inflate it); `inQueue` is the headline number.
+function arenaStats() {
+  return {
+    inQueue: queue.length,
+    online: walletToSocket.size,
+    liveMatches: activeGames.size,
+  };
+}
+
+function broadcastArenaStats() {
+  if (!io) return;
+  io.emit("queue:stats", arenaStats());
+}
+
 // Gameplay state is fully in-memory; the database is only used for persistence
 // (users, match records, ratings, leaderboard). So a DB outage should never
 // break a live game — every DB call is wrapped here and falls back gracefully.
@@ -340,6 +357,9 @@ async function startMatch(player1: QueueEntry, player2: QueueEntry) {
 
   // Start timer
   startGameTimer(matchId);
+
+  // Two players just left the queue and a match went live — refresh everyone.
+  broadcastArenaStats();
 }
 
 function startGameTimer(matchId: number) {
@@ -491,6 +511,9 @@ async function endMatch(
   socketToMatch.delete(game.blackSocket);
   activeGames.delete(matchId);
 
+  // Live match count changed.
+  broadcastArenaStats();
+
   // Anti-cheat check
   runAntiCheat(matchId, game);
 }
@@ -532,10 +555,21 @@ export function setupSocketIO(httpServer: HTTPServer) {
   });
 
   io.on("connection", (socket) => {
+    // Push current arena activity to the freshly connected client right away so
+    // landing/lobby/play can show live counts without waiting for the next event.
+    socket.emit("queue:stats", arenaStats());
+
+    // Explicit request for current stats (used by the shared client provider on
+    // (re)connect).
+    socket.on("queue:stats", () => {
+      socket.emit("queue:stats", arenaStats());
+    });
+
     // Wallet connect
     socket.on("wallet:connect", async ({ walletAddress }) => {
       walletToSocket.set(walletAddress, socket.id);
       socketToWallet.set(socket.id, walletAddress);
+      broadcastArenaStats();
       await safeDb("wallet:connect findOrCreateUser", () => findOrCreateUser(walletAddress), null);
     });
 
@@ -593,6 +627,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
       queue.push(entry);
 
       socket.emit("queue:joined", { position: queue.length });
+      broadcastArenaStats();
 
       // Try to find match immediately
       const opponent = findOpponent(entry);
@@ -609,6 +644,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
         if (idx > -1) queue.splice(idx, 1);
       }
       socket.emit("queue:left");
+      broadcastArenaStats();
     });
 
     // Join an accepted wager match (both stakes already deposited + verified via
@@ -680,6 +716,7 @@ export function setupSocketIO(httpServer: HTTPServer) {
           blackTime: game.blackTime,
         });
         startGameTimer(matchId);
+        broadcastArenaStats();
       }
     });
 
@@ -848,6 +885,9 @@ export function setupSocketIO(httpServer: HTTPServer) {
       socketToWallet.delete(socket.id);
       socketToMatch.delete(socket.id);
       lastChatAt.delete(socket.id);
+
+      // Online/queue counts changed.
+      broadcastArenaStats();
     });
   });
 
@@ -866,6 +906,10 @@ export function setupSocketIO(httpServer: HTTPServer) {
       }
     }
   }, 3000);
+
+  // Heartbeat: rebroadcast live arena counts as a safety net so clients stay in
+  // sync even if they missed an event-driven update.
+  setInterval(broadcastArenaStats, 5000);
 
   return io;
 }

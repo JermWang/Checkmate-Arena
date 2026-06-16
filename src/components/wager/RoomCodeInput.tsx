@@ -79,7 +79,7 @@ export function RoomCodeInput({ value, onChange, onComplete, error }: Props) {
             "aspect-square w-full rounded-lg border bg-white/[0.02] text-center font-mono text-xl uppercase text-white focus:outline-none focus:ring-2 transition-all",
             showError
               ? "border-red-500/60 focus:ring-red-500/40"
-              : "border-white/10 focus:border-[#14F195] focus:ring-[#14F195]/40"
+              : "border-white/10 focus:border-[#E6B84F] focus:ring-[#E6B84F]/40"
           )}
         />
       ))}

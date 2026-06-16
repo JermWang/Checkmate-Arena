@@ -88,10 +88,10 @@ export default function LobbyPrivateJoin() {
           Accept challenge
         </h1>
 
-        <div className="rounded-2xl border border-[#14F195]/30 bg-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(20,241,149,0.15),0_0_32px_rgba(20,241,149,0.10)]">
+        <div className="rounded-2xl border border-[#E6B84F]/30 bg-white/[0.02] p-5 shadow-[0_0_0_1px_rgba(230, 184, 79,0.15),0_0_32px_rgba(230, 184, 79,0.10)]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#3C3489] font-mono text-xs font-medium text-[#CECBF6]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#5A4A18] font-mono text-xs font-medium text-[#EFE2B8]">
                 {opponent.handle.slice(0, 2).toUpperCase()}
               </div>
               <div>
@@ -103,13 +103,13 @@ export default function LobbyPrivateJoin() {
             </div>
             <div className="font-mono text-[10px] text-[#8A8F98]">
               Code:{" "}
-              <span className="text-[#14F195]">{code || "------"}</span>
+              <span className="text-[#E6B84F]">{code || "------"}</span>
             </div>
           </div>
 
           <div className="space-y-2 border-y border-white/5 py-4">
             <Line icon={<Coins className="w-3.5 h-3.5" />} k="Stake">
-              <span className="font-mono text-[#14F195]">
+              <span className="font-mono text-[#E6B84F]">
                 {stake.toLocaleString()} $CHESS
               </span>
             </Line>
@@ -121,7 +121,7 @@ export default function LobbyPrivateJoin() {
             </Line>
           </div>
 
-          <div className="mt-4 rounded-lg border border-[#14F195]/25 bg-[#14F195]/[0.05] p-3 font-mono text-xs text-[#14F195]">
+          <div className="mt-4 rounded-lg border border-[#E6B84F]/25 bg-[#E6B84F]/[0.05] p-3 font-mono text-xs text-[#E6B84F]">
             Accepting locks {stake.toLocaleString()} $CHESS in escrow. Winner takes{" "}
             {payoutFromStake(stake).toLocaleString()} after the 2% house fee.
             You pay your own network gas when signing.
@@ -143,7 +143,7 @@ export default function LobbyPrivateJoin() {
             size="lg"
             onClick={onAccept}
             disabled={accepting || !code || !CAN_CREATE_REAL_WAGERS || !challenge.data}
-            className="mt-4 w-full bg-[#14F195] text-black hover:bg-[#14F195]/90 disabled:cursor-not-allowed disabled:opacity-45"
+            className="mt-4 w-full bg-[#E6B84F] text-black hover:bg-[#E6B84F]/90 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {accepting ? (
               <>

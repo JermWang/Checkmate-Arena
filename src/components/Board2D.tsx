@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Chessboard } from "react-chessboard";
 
-const BRAND = "#14F195";
+const BRAND = "#E6B84F";
 const CAPTURE = "#ff5470";
 const FILES = "abcdefgh";
-const SELECTED_LAYER = "linear-gradient(rgba(20, 241, 149, 0.32), rgba(20, 241, 149, 0.32))";
-const HOVER_LAYER = "linear-gradient(rgba(20, 241, 149, 0.16), rgba(20, 241, 149, 0.16))";
-const HOVER_PIECE_LAYER = "linear-gradient(rgba(20, 241, 149, 0.26), rgba(20, 241, 149, 0.26))";
+const SELECTED_LAYER = "linear-gradient(rgba(230, 184, 79, 0.32), rgba(230, 184, 79, 0.32))";
+const HOVER_LAYER = "linear-gradient(rgba(230, 184, 79, 0.16), rgba(230, 184, 79, 0.16))";
+const HOVER_PIECE_LAYER = "linear-gradient(rgba(230, 184, 79, 0.26), rgba(230, 184, 79, 0.26))";
 
 function occupiedFromFen(fen: string): Set<string> {
   const out = new Set<string>();
@@ -108,7 +108,7 @@ export function Board2D({
       allowDragging: false,
       showNotation: true,
       squareStyles,
-      darkSquareStyle: { backgroundColor: "#1f6e57" },
+      darkSquareStyle: { backgroundColor: "#7A5E18" },
       lightSquareStyle: { backgroundColor: "#e7ddc6" },
       boardStyle: {
         borderRadius: "0.5rem",
@@ -136,7 +136,7 @@ export function Board2D({
   );
 
   return (
-    <div className="w-full h-full p-2 bg-[#0a0a0f] rounded-xl flex items-center justify-center">
+    <div className="w-full h-full p-2 bg-[#0A0905] rounded-xl flex items-center justify-center">
       <div className="w-full">
         <Chessboard options={options} />
       </div>

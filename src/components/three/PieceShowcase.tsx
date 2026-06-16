@@ -4,7 +4,7 @@ import { OrbitControls, ContactShadows, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { useChessSet, bakedGeometry, findMesh, PIECE_NODE } from "./chessSet";
 
-const BRAND = "#14F195";
+const BRAND = "#E6B84F";
 
 function PieceMesh({ pieceKey, height = 2.4 }: { pieceKey: string; height?: number }) {
   const { scene } = useChessSet();
@@ -27,7 +27,7 @@ function PieceMesh({ pieceKey, height = 2.4 }: { pieceKey: string; height?: numb
       mat.metalness = 0.25;
       mat.roughness = 0.35;
     } else {
-      mat.color = new THREE.Color("#15151c");
+      mat.color = new THREE.Color("#14120B");
       mat.metalness = 0.45;
       mat.roughness = 0.3;
     }
@@ -82,7 +82,7 @@ export function PieceShowcase({
           shadow-mapSize={[1024, 1024]}
         />
         {/* cool fill */}
-        <directionalLight position={[-4, 2, 3]} intensity={1.2} color="#9fb8ff" />
+        <directionalLight position={[-4, 2, 3]} intensity={1.2} color="#E3CB82" />
         <directionalLight position={[0, 3, 5]} intensity={1.7} color="#ffffff" />
         {/* brand-green rim from behind */}
         <pointLight position={[-2, 3, -4]} intensity={45} distance={14} color={BRAND} />

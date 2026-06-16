@@ -4,7 +4,7 @@ import { OrbitControls, ContactShadows, Environment } from "@react-three/drei";
 import * as THREE from "three";
 import { useChessSet, findMesh, PIECE_NODE, BOARD_NODE } from "./chessSet";
 
-const BRAND = "#14F195";
+const BRAND = "#E6B84F";
 const CAPTURE = "#ff5470"; // capture-move indicator (lands on an enemy piece)
 const BACKDROP = "#e7ddc6"; // cream backdrop — keeps dark pieces readable
 const FILES = "abcdefgh";
@@ -124,7 +124,7 @@ function Pieces({
   }, [assets]);
   const blackMat = useMemo(() => {
     const m = assets.boardMat.clone();
-    m.color = new THREE.Color("#15151c");
+    m.color = new THREE.Color("#14120B");
     m.metalness = 0.45;
     m.roughness = 0.35;
     return m;
@@ -363,7 +363,7 @@ export function Board3D({
           castShadow
           shadow-mapSize={[2048, 2048]}
         />
-        <directionalLight position={[-6, 4, -4]} intensity={0.5} color="#9fb8ff" />
+        <directionalLight position={[-6, 4, -4]} intensity={0.5} color="#E3CB82" />
         <pointLight position={[0, 4, -7]} intensity={30} distance={22} color={BRAND} />
         <Environment preset="city" environmentIntensity={0.3} />
         <OrbitControls

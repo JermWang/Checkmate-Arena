@@ -1,12 +1,14 @@
 import { Link, useLocation } from "react-router";
 import { useWallet } from "./wallet/WalletProvider";
 import { Trophy, Swords, Gift, Wallet, LogOut, Coins, House } from "lucide-react";
+import { useArenaStats } from "@/providers/arenaStats";
 import { useAuth } from "@/hooks/useAuth";
 import { trpc } from "@/providers/trpc";
 import { avatarUrl, displayName } from "@/lib/profile";
 
 export default function Navbar() {
   const { walletAddress, connected, connect, disconnect, isGuest } = useWallet();
+  const arena = useArenaStats();
   useAuth();
   const location = useLocation();
   const isLanding = location.pathname === "/";
@@ -19,7 +21,7 @@ export default function Navbar() {
   const isActive = (path: string) => location.pathname === path;
   const navItems = [
     { to: "/", active: isActive("/"), icon: <House className="w-4 h-4" />, label: "Home" },
-    { to: "/play", active: isActive("/play"), icon: <Swords className="w-4 h-4" />, label: "Play" },
+    { to: "/play", active: isActive("/play"), icon: <Swords className="w-4 h-4" />, label: "Play", badge: arena.inQueue },
     { to: "/lobby", active: location.pathname.startsWith("/lobby"), icon: <Coins className="w-4 h-4" />, label: "Lobby" },
     { to: "/leaderboard", active: isActive("/leaderboard"), icon: <Trophy className="w-4 h-4" />, label: "Leaderboard" },
     { to: "/rewards", active: isActive("/rewards"), icon: <Gift className="w-4 h-4" />, label: "Rewards" },
@@ -35,7 +37,7 @@ export default function Navbar() {
         <div className="max-w-[1440px] mx-auto px-3 sm:px-4 md:px-8 h-16 flex items-center justify-between gap-3">
           {/* Logo */}
           <Link to="/" className="flex min-w-0 items-center gap-2 group">
-            <Swords className="w-5 h-5 shrink-0 text-[#14F195]" />
+            <Swords className="w-5 h-5 shrink-0 text-[#E6B84F]" />
             <span className="hidden min-[360px]:inline truncate text-sm font-medium tracking-widest uppercase text-white">
               Checkmate Arena
             </span>
@@ -50,6 +52,21 @@ export default function Navbar() {
 
           {/* Wallet + Auth */}
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <Link
+              to="/play"
+              title="Join the ranked queue"
+              className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#E6B84F]/25 bg-[#E6B84F]/[0.06] px-3 py-1.5 text-xs font-medium text-[#E6B84F] transition-colors hover:bg-[#E6B84F]/[0.12]"
+            >
+              <span className="relative flex h-2 w-2">
+                {arena.live && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#E6B84F] opacity-70" />
+                )}
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${arena.live ? "bg-[#E6B84F]" : "bg-[#8A8F98]"}`} />
+              </span>
+              <span className="font-mono tabular-nums">{arena.inQueue}</span>
+              <span className="text-[#E6B84F]/70">in queue</span>
+            </Link>
+
             {connected && walletAddress ? (
               <div className="flex items-center gap-2">
                 {isGuest && (
@@ -133,18 +150,25 @@ function NavLink({ to, active, icon, label }: { to: string; active: boolean; ico
   );
 }
 
-function MobileNavLink({ to, active, icon, label }: { to: string; active: boolean; icon: React.ReactNode; label: string }) {
+function MobileNavLink({ to, active, icon, label, badge }: { to: string; active: boolean; icon: React.ReactNode; label: string; badge?: number }) {
   return (
     <Link
       to={to}
       aria-current={active ? "page" : undefined}
-      className={`flex h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition-colors ${
+      className={`relative flex h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg text-[10px] font-medium transition-colors ${
         active
           ? "bg-white/10 text-white"
           : "text-white/55 hover:bg-white/5 hover:text-white"
       }`}
     >
-      {icon}
+      <span className="relative">
+        {icon}
+        {badge ? (
+          <span className="absolute -right-2.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#E6B84F] px-1 text-[9px] font-bold leading-none text-black">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
+      </span>
       <span className="max-w-full truncate">{label}</span>
     </Link>
   );

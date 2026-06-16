@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router";
 import { useWallet } from "@/components/wallet/WalletProvider";
+import { useArenaStats } from "@/providers/arenaStats";
 import { GAME_CONFIG, getRatingBucket } from "@/config/game";
-import { Swords, Shield, LogOut, RotateCcw, Flag, Eye, Box, Grid3x3 } from "lucide-react";
+import { Swords, Shield, LogOut, RotateCcw, Flag, Eye, Box, Grid3x3, Users, Radio, Clock, Trophy, Gamepad2, Lock } from "lucide-react";
 import type { ServerToClientEvents, ClientToServerEvents } from "../../contracts/types";
 import { io, type Socket } from "socket.io-client";
 import { Board3D } from "@/components/three/Board3D";
@@ -17,7 +19,8 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export default function Play() {
-  const { walletAddress, connected, connect, checkEligibility } = useWallet();
+  const { walletAddress, connected, connect, checkEligibility, isEligible, tokenBalance } = useWallet();
+  const arena = useArenaStats();
   const [searchParams] = useSearchParams();
   const spectateParam = searchParams.get("spectate");
   const spectateMatchId = spectateParam ? Number(spectateParam) : null;
@@ -42,10 +45,16 @@ export default function Play() {
   const [ratingChange, setRatingChange] = useState(0);
   const [spectatorCount, setSpectatorCount] = useState(0);
   const [queuePosition, setQueuePosition] = useState(0);
+  const [queuedAt, setQueuedAt] = useState<number | null>(null);
+  const [queueElapsed, setQueueElapsed] = useState(0);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [boardMode, setBoardMode] = useState<"3d" | "2d">(() => {
     if (typeof window === "undefined") return "3d";
-    return localStorage.getItem("checkmate.boardMode") === "2d" ? "2d" : "3d";
+    const stored = localStorage.getItem("checkmate.boardMode");
+    if (stored === "2d" || stored === "3d") return stored;
+    // No saved preference: default phones to the lightweight 2D board so the
+    // match loads fast and stays smooth on low-memory devices.
+    return window.matchMedia("(max-width: 767px)").matches ? "2d" : "3d";
   });
   const chessRef = useRef<Chess | null>(null);
   const colorRef = useRef(color);
@@ -65,6 +74,19 @@ export default function Play() {
     });
   }, []);
 
+  // Tick the "searching for…" timer while in queue.
+  useEffect(() => {
+    if (gameState !== "queue" || !queuedAt) {
+      setQueueElapsed(0);
+      return;
+    }
+    setQueueElapsed(Math.floor((Date.now() - queuedAt) / 1000));
+    const id = window.setInterval(() => {
+      setQueueElapsed(Math.floor((Date.now() - queuedAt) / 1000));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [gameState, queuedAt]);
+
   useEffect(() => {
     let cancelled = false;
     if (isSpectatingRoute) {
@@ -76,8 +98,10 @@ export default function Play() {
     if (connected && walletAddress) {
       setIsDemoMode(false);
       setGameState("idle");
-      checkEligibility().then(() => {
+      checkEligibility().then((eligible) => {
         if (cancelled) return;
+        // Only the gate can move us out of idle here; never override an active game.
+        if (eligible === false) setGameState((s) => (s === "idle" ? "ineligible" : s));
       });
     }
     return () => {
@@ -223,7 +247,16 @@ export default function Play() {
 
   const joinQueue = useCallback(() => {
     if (!socket || !walletAddress) return;
+    // Token gate: block entry and surface the requirement instead of queueing.
+    if (isEligible === false) {
+      setGameState("ineligible");
+      return;
+    }
     setIsDemoMode(false);
+    setQueuedAt(Date.now());
+    // Optimistically flip to the queue view so the click feels instant; the
+    // server's queue:joined confirms it a beat later.
+    setGameState("queue");
 
     if (!socket.connected) {
       socket.once("connect", () => {
@@ -233,10 +266,11 @@ export default function Play() {
     } else {
       socket.emit("queue:join", { walletAddress, rating: 1000 });
     }
-  }, [socket, walletAddress]);
+  }, [socket, walletAddress, isEligible]);
 
   const leaveQueue = useCallback(() => {
     socket?.emit("queue:leave");
+    setQueuedAt(null);
     setGameState("idle");
   }, [socket]);
 
@@ -409,14 +443,14 @@ export default function Play() {
         }}
       >
         <div className="w-full max-w-md text-center">
-          <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
+          <Shield className="w-16 h-16 text-[#E6B84F] mx-auto mb-6" />
           <h1 className="text-3xl font-bold mb-4">Connect Your Wallet</h1>
           <p className="text-[#8A8F98] mb-8">
             Connect your Solana wallet to enter the ranked arena.
           </p>
           <button
             onClick={connect}
-            className="w-full px-8 py-3 bg-[#14F195] text-black font-semibold rounded-full hover:bg-[#14F195]/90 transition-all"
+            className="w-full px-8 py-3 bg-[#E6B84F] text-black font-semibold rounded-full hover:bg-[#E6B84F]/90 transition-all"
           >
             Connect Wallet
           </button>
@@ -445,7 +479,7 @@ export default function Play() {
     return (
       <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#14F195] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-8 h-8 border-2 border-[#E6B84F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#8A8F98]">Connecting wallet...</p>
         </div>
       </div>
@@ -453,20 +487,162 @@ export default function Play() {
   }
 
   if (gameState === "ineligible") {
+    const required = GAME_CONFIG.requiredTokenBalance;
     return (
-      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center pt-16">
-        <div className="text-center max-w-md mx-auto">
-          <Shield className="w-16 h-16 text-[#14F195] mx-auto mb-6" />
-          <h1 className="text-3xl font-bold mb-4">Arena Open</h1>
-          <p className="text-[#8A8F98] mb-4">
-            Token gating is disabled while we test the play cycle.
+      <div className="min-h-screen bg-[#050505] text-white flex items-center justify-center px-4 pt-16">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#E6B84F]/30 bg-[#E6B84F]/[0.06]">
+            <Lock className="h-7 w-7 text-[#E6B84F]" />
+          </div>
+          <h1 className="text-3xl font-bold mb-3">Ranked is token-gated</h1>
+          <p className="text-[#A6ABB4] mb-5 leading-7">
+            Hold <span className="font-semibold text-[#E6B84F]">{required.toLocaleString()} $CHESS</span> to
+            enter ranked matchmaking. Your balance is checked on-chain when you connect.
           </p>
-          <button
-            onClick={checkEligibility}
-            className="px-6 py-2 border border-white/20 rounded-full text-sm hover:bg-white/5 transition-colors"
-          >
-            Check Again
-          </button>
+          <div className="mb-6 flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm">
+            <span className="text-[#8A8F98]">You're holding</span>
+            <span className="font-mono font-semibold text-white">
+              {Math.floor(tokenBalance).toLocaleString()} / {required.toLocaleString()} $CHESS
+            </span>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => void checkEligibility()}
+              className="w-full rounded-xl bg-[#E6B84F] py-3 text-sm font-semibold text-black transition-all hover:bg-[#E6B84F]/90"
+            >
+              I've bought $CHESS — check again
+            </button>
+            <button
+              onClick={() => void startDemo()}
+              className="inline-flex items-center justify-center gap-2 text-sm text-[#8A8F98] transition-colors hover:text-white"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Try demo vs bot (no tokens needed)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Focused ranked-queue screen ──────────────────────────────
+  // Before a match exists, lead the player straight to matchmaking with a big,
+  // unambiguous Join action and live arena activity — no empty board to parse.
+  if ((gameState === "idle" || gameState === "queue") && !isSpectatingRoute && !isDemoMode) {
+    const inQueue = Math.max(arena.inQueue, gameState === "queue" ? 1 : 0);
+    const searching = gameState === "queue";
+    const elapsedLabel = `${Math.floor(queueElapsed / 60)}:${String(queueElapsed % 60).padStart(2, "0")}`;
+
+    return (
+      <div className="min-h-screen bg-[#050505] text-white pt-16" onPointerDownCapture={primeGameAudio}>
+        <div className="mx-auto flex max-w-[640px] flex-col items-center px-4 py-10 sm:py-14">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#E6B84F]/30 bg-[#E6B84F]/[0.06] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-[#E6B84F]">
+            <Trophy className="h-3.5 w-3.5" />
+            Ranked · {GAME_CONFIG.requiredTokenBalance.toLocaleString()} $CHESS to play
+          </div>
+          <h1 className="mt-5 text-center text-4xl font-bold tracking-tight sm:text-5xl">
+            Ranked Queue
+          </h1>
+          <p className="mt-3 max-w-md text-center text-sm leading-6 text-[#A6ABB4] sm:text-base">
+            Get matched with an opponent near your rating and play a rated 5-minute
+            game. Holding {GAME_CONFIG.requiredTokenBalance.toLocaleString()} $CHESS unlocks ranked — no per-game stake.
+          </p>
+
+          {/* Live arena activity */}
+          <div className="mt-8 grid w-full grid-cols-3 gap-3">
+            <QueueStat
+              icon={<Users className="h-4 w-4 text-[#E6B84F]" />}
+              value={inQueue}
+              label="In queue"
+              emphasize
+            />
+            <QueueStat
+              icon={<Radio className="h-4 w-4 text-[#E6B84F]" />}
+              value={arena.online}
+              label="Players online"
+            />
+            <QueueStat
+              icon={<Eye className="h-4 w-4 text-[#E6B84F]" />}
+              value={arena.liveMatches}
+              label="Live matches"
+            />
+          </div>
+
+          {/* Primary action */}
+          <div className="mt-8 w-full rounded-2xl border border-white/10 bg-white/[0.025] p-6 text-center">
+            {searching ? (
+              <>
+                <div className="mx-auto mb-4 flex items-center justify-center gap-3">
+                  <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#E6B84F] border-t-transparent" />
+                  <span className="text-lg font-semibold text-[#E6B84F]">Searching for an opponent…</span>
+                </div>
+                <p className="font-mono text-sm text-[#8A8F98]">
+                  {inQueue > 1
+                    ? `${inQueue} players in the queue`
+                    : "You're first in line — hang tight"}{" "}
+                  · <span className="text-white">{elapsedLabel}</span>
+                </p>
+                <button
+                  onClick={leaveQueue}
+                  className="mt-5 inline-flex items-center justify-center gap-2 rounded-full border border-red-500/30 px-5 py-2.5 text-sm font-medium text-red-400 transition-all hover:bg-red-500/10"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Leave queue
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={joinQueue}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#E6B84F] py-4 text-base font-semibold text-black transition-all hover:bg-[#E6B84F]/90"
+                >
+                  <Swords className="h-5 w-5" />
+                  Join Ranked Queue
+                </button>
+                <p className="mt-3 text-xs text-[#8A8F98]">
+                  {arena.inQueue > 0
+                    ? `${arena.inQueue} ${arena.inQueue === 1 ? "player is" : "players are"} waiting — you'll likely match instantly.`
+                    : "Be the first in the queue. The moment someone else joins, you're matched."}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Match facts */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-[#8A8F98]">
+            <Fact icon={<Clock className="h-3.5 w-3.5 text-[#E6B84F]" />}>
+              {GAME_CONFIG.timeControlSeconds / 60}+0 blitz
+            </Fact>
+            <Fact icon={<Shield className="h-3.5 w-3.5 text-[#E6B84F]" />}>Server-validated</Fact>
+            <Fact icon={<Trophy className="h-3.5 w-3.5 text-[#E6B84F]" />}>ELO rated · climbs leaderboard</Fact>
+          </div>
+
+          {/* Secondary paths */}
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+            <Link
+              to="/lobby"
+              className="inline-flex items-center gap-1.5 text-sm text-[#8A8F98] transition-colors hover:text-white"
+            >
+              <Eye className="h-4 w-4" />
+              Watch live matches
+            </Link>
+            <span className="hidden text-white/15 sm:inline">·</span>
+            <Link
+              to="/leaderboard"
+              className="inline-flex items-center gap-1.5 text-sm text-[#8A8F98] transition-colors hover:text-white"
+            >
+              <Trophy className="h-4 w-4" />
+              Leaderboard
+            </Link>
+            <span className="hidden text-white/15 sm:inline">·</span>
+            <button
+              onClick={() => void startDemo()}
+              className="inline-flex items-center gap-1.5 text-sm text-[#8A8F98] transition-colors hover:text-white"
+            >
+              <Gamepad2 className="h-4 w-4" />
+              Try demo vs bot
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -480,8 +656,8 @@ export default function Play() {
           <div className="space-y-4">
             <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-[#14F195]/20 flex items-center justify-center">
-                  <Swords className="w-5 h-5 text-[#14F195]" />
+                <div className="w-10 h-10 rounded-full bg-[#E6B84F]/20 flex items-center justify-center">
+                  <Swords className="w-5 h-5 text-[#E6B84F]" />
                 </div>
                 <div>
                   <p className="text-sm font-medium">{isSpectating ? "Spectator" : "You"}</p>
@@ -491,7 +667,7 @@ export default function Play() {
                 </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#8A8F98]">
-                <Shield className="w-3.5 h-3.5 text-[#14F195]" />
+                <Shield className="w-3.5 h-3.5 text-[#E6B84F]" />
                 <span>{isDemoMode ? "Demo mode" : isSpectating ? "Watching live" : "Wallet connected"}</span>
               </div>
             </div>
@@ -505,18 +681,18 @@ export default function Play() {
               )}
               {gameState === "queue" && (
                 <div>
-                  <p className="text-xs text-[#14F195] animate-pulse">In queue...</p>
+                  <p className="text-xs text-[#E6B84F] animate-pulse">In queue...</p>
                   <p className="text-xs text-[#8A8F98] mt-1">Position: {queuePosition}</p>
                 </div>
               )}
-              {gameState === "matched" && <p className="text-xs text-[#14F195]">Match found!</p>}
-              {gameState === "playing" && <p className="text-xs text-[#14F195]">Game in progress</p>}
-              {gameState === "spectating" && <p className="text-xs text-[#14F195]">Spectating live match</p>}
+              {gameState === "matched" && <p className="text-xs text-[#E6B84F]">Match found!</p>}
+              {gameState === "playing" && <p className="text-xs text-[#E6B84F]">Game in progress</p>}
+              {gameState === "spectating" && <p className="text-xs text-[#E6B84F]">Spectating live match</p>}
               {gameState === "ended" && result && (
                 <div>
                   <p className="text-xs text-[#8A8F98]">Game ended: {result}</p>
                   {ratingChange !== 0 && (
-                    <p className={`text-sm font-semibold mt-1 ${ratingChange > 0 ? "text-[#14F195]" : "text-red-400"}`}>
+                    <p className={`text-sm font-semibold mt-1 ${ratingChange > 0 ? "text-[#E6B84F]" : "text-red-400"}`}>
                       {ratingChange > 0 ? "+" : ""}{ratingChange} rating
                     </p>
                   )}
@@ -524,7 +700,7 @@ export default function Play() {
               )}
               {!isDemoMode && (gameState === "matched" || isLiveBoard) && (
                 <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
-                  <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                  <Eye className="h-3.5 w-3.5 text-[#E6B84F]" />
                   <span>{spectatorCount} watching</span>
                 </div>
               )}
@@ -533,7 +709,7 @@ export default function Play() {
             {gameState === "idle" && !isSpectatingRoute && (
               <button
                 onClick={joinQueue}
-                className="w-full py-3 bg-[#14F195] text-black font-semibold rounded-xl hover:bg-[#14F195]/90 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#E6B84F] text-black font-semibold rounded-xl hover:bg-[#E6B84F]/90 transition-all flex items-center justify-center gap-2"
               >
                 <Swords className="w-4 h-4" />
                 Join Ranked Queue
@@ -571,7 +747,7 @@ export default function Play() {
                   setResult(null);
                   setFen(START_FEN);
                 }}
-                className="w-full py-3 bg-[#14F195] text-black font-semibold rounded-xl hover:bg-[#14F195]/90 transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#E6B84F] text-black font-semibold rounded-xl hover:bg-[#E6B84F]/90 transition-all flex items-center justify-center gap-2"
               >
                 <RotateCcw className="w-4 h-4" />
                 Play Again
@@ -591,7 +767,7 @@ export default function Play() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[#8A8F98]">
-                    <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                    <Eye className="h-3.5 w-3.5 text-[#E6B84F]" />
                     {spectatorCount}
                   </div>
                   <div className={`text-xl font-mono font-bold px-3 py-1 rounded-lg ${
@@ -609,7 +785,7 @@ export default function Play() {
                 <button
                   onClick={() => selectBoardMode("3d")}
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full transition-colors ${
-                    boardMode === "3d" ? "bg-[#14F195] text-black font-medium" : "text-[#8A8F98] hover:text-white"
+                    boardMode === "3d" ? "bg-[#E6B84F] text-black font-medium" : "text-[#8A8F98] hover:text-white"
                   }`}
                 >
                   <Box className="w-3.5 h-3.5" />
@@ -618,7 +794,7 @@ export default function Play() {
                 <button
                   onClick={() => selectBoardMode("2d")}
                   className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full transition-colors ${
-                    boardMode === "2d" ? "bg-[#14F195] text-black font-medium" : "text-[#8A8F98] hover:text-white"
+                    boardMode === "2d" ? "bg-[#E6B84F] text-black font-medium" : "text-[#8A8F98] hover:text-white"
                   }`}
                   title="Simple, low-memory board"
                 >
@@ -667,7 +843,7 @@ export default function Play() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#8A8F98] font-mono">{bottomLabel}</span>
-                  <div className="w-6 h-6 rounded-full bg-[#14F195]/20 flex items-center justify-center text-xs text-[#14F195]">
+                  <div className="w-6 h-6 rounded-full bg-[#E6B84F]/20 flex items-center justify-center text-xs text-[#E6B84F]">
                     {boardOrientation === "white" ? "W" : "B"}
                   </div>
                 </div>
@@ -675,10 +851,10 @@ export default function Play() {
             )}
 
             {gameState === "ended" && result && (
-              <div className="mt-4 p-4 rounded-xl border border-[#14F195]/30 bg-[#14F195]/5 text-center">
+              <div className="mt-4 p-4 rounded-xl border border-[#E6B84F]/30 bg-[#E6B84F]/5 text-center">
                 <p className="text-lg font-semibold capitalize">{result.replace("_", " ")}</p>
                 {ratingChange !== 0 && (
-                  <p className={`text-2xl font-bold mt-1 ${ratingChange > 0 ? "text-[#14F195]" : "text-red-400"}`}>
+                  <p className={`text-2xl font-bold mt-1 ${ratingChange > 0 ? "text-[#E6B84F]" : "text-red-400"}`}>
                     {ratingChange > 0 ? "+" : ""}{ratingChange}
                   </p>
                 )}
@@ -735,12 +911,12 @@ export default function Play() {
                 </div>
                 <div className="flex justify-between">
                   <span>Bucket</span>
-                  <span className="text-[#14F195]">{getRatingBucket(1000)}</span>
+                  <span className="text-[#E6B84F]">{getRatingBucket(1000)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Viewers</span>
                   <span className="inline-flex items-center gap-1 text-white">
-                    <Eye className="h-3.5 w-3.5 text-[#14F195]" />
+                    <Eye className="h-3.5 w-3.5 text-[#E6B84F]" />
                     {spectatorCount}
                   </span>
                 </div>
@@ -759,5 +935,46 @@ export default function Play() {
         </div>
       </div>
     </div>
+  );
+}
+
+function QueueStat({
+  icon,
+  value,
+  label,
+  emphasize,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  emphasize?: boolean;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-4 text-center ${
+        emphasize
+          ? "border-[#E6B84F]/30 bg-[#E6B84F]/[0.06]"
+          : "border-white/10 bg-white/[0.02]"
+      }`}
+    >
+      {icon}
+      <span
+        className={`font-mono text-2xl font-bold tabular-nums ${
+          emphasize ? "text-[#E6B84F]" : "text-white"
+        }`}
+      >
+        {value}
+      </span>
+      <span className="text-[11px] uppercase tracking-wider text-[#8A8F98]">{label}</span>
+    </div>
+  );
+}
+
+function Fact({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.02] px-3 py-1.5">
+      {icon}
+      {children}
+    </span>
   );
 }
